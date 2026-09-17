@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% import "partials/avatar.html" as avatar %}
+{% block title %}Leave · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h4 class="fw-bold mb-0">Leave Management</h4>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#applyLeaveModal"><i class="bi bi-plus-lg"></i> Apply Leave</button>
+</div>
+
+<div class="card-flat mb-3">
+  <form method="get" class="d-flex gap-2 align-items-end">
+    <div>
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select" onchange="this.form.submit()">
+        <option value="">All</option>
+        {% for s in ['Pending', 'Approved', 'Rejected'] %}
+        <option value="{{ s }}" {{ 'selected' if status_filter == s }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+</div>
+
+<div class="card-flat">
+  <div class="table-responsive"><table class="table align-middle">
+    <thead><tr><th>Employee</th><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Reason</th><th>Status</th>
+    {% if session_role in ['ADMIN', 'HR', 'MANAGER'] %}<th class="text-end">Actions</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for l in requests %}
+      <tr>
+        <td><div class="d-flex align-items-center gap-2">{{ avatar.render(l.employee, size=26) }} {{ l.employee.full_name }}</div></td>
+        <td>{{ l.leave_type }}</td>
+        <td>{{ l.start_date|dateformat }}</td>
+        <td>{{ l.end_date|dateformat }}</td>
+        <td>{{ l.days }}</td>
+        <td class="text-truncate" style="max-width:180px;">{{ l.reason or '-' }}</td>
+        <td><span class="badge-status badge-{{ l.status|lower }}">{{ l.status }}</span></td>
+        {% if session_role in ['ADMIN', 'HR', 'MANAGER'] %}
+        <td class="text-end">
+          {% if l.status == 'Pending' %}
+          <form method="POST" action="{{ url_for('leave.approve_leave', leave_id=l.id) }}" class="d-inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-outline-success"><i class="bi bi-check-lg"></i></button>
+          </form>
+          <form method="POST" action="{{ url_for('leave.reject_leave', leave_id=l.id) }}" class="d-inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x-lg"></i></button>
+          </form>
+          {% else %}
+          <span class="text-muted small">by {{ l.decided_by or '-' }}</span>
+          {% endif %}
+        </td>
+        {% endif %}
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="text-center text-muted py-4">No leave requests found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+
+<div class="modal fade" id="applyLeaveModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <form method="POST" action="{{ url_for('leave.apply_leave') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-header"><h6 class="modal-title">Apply for Leave</h6></div>
+      <div class="modal-body">
+        <label class="form-label">Employee</label>
+        <select name="employee_id" class="form-select mb-3" required>
+          {% for e in employees %}<option value="{{ e.id }}" {{ 'selected' if session_role == 'EMPLOYEE' and e.id == session.get('employee_id') }}>{{ e.full_name }}</option>{% endfor %}
+        </select>
+        <label class="form-label">Leave Type</label>
+        <select name="leave_type" class="form-select mb-3">
+          {% for t in leave_types %}<option>{{ t }}</option>{% endfor %}
+        </select>
+        <div class="row g-2 mb-3">
+          <div class="col-6"><label class="form-label">Start Date</label><input type="date" name="start_date" class="form-control" required></div>
+          <div class="col-6"><label class="form-label">End Date</label><input type="date" name="end_date" class="form-control" required></div>
+        </div>
+        <label class="form-label">Reason</label>
+        <textarea name="reason" class="form-control" rows="2"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+{% endblock %}

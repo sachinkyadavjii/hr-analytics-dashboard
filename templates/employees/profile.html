@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% import "partials/avatar.html" as avatar %}
+{% block title %}{{ employee.full_name }} · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="card-flat mb-3">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="position-relative">
+        {{ avatar.render(employee, size=64, font_size=22) }}
+        {% if session_role in ['ADMIN', 'HR'] %}
+        <button type="button" class="btn btn-sm btn-light rounded-circle position-absolute" style="width:24px;height:24px;padding:0;bottom:-2px;right:-2px;border:1px solid var(--border);"
+                data-bs-toggle="modal" data-bs-target="#photoModal" title="Change photo">
+          <i class="bi bi-camera-fill" style="font-size:0.7rem;"></i>
+        </button>
+        {% endif %}
+      </div>
+      <div>
+        <h4 class="fw-bold mb-0">{{ employee.full_name }}</h4>
+        <div class="text-muted">{{ employee.job_title or '-' }} · {{ employee.employee_code }}</div>
+        <div class="text-muted small">{{ employee.department.name if employee.department else 'Unassigned' }}
+          &middot; <span class="badge-status badge-{{ employee.status|lower|replace(' ', '') }}">{{ employee.status }}</span>
+        </div>
+      </div>
+    </div>
+    {% if session_role in ['ADMIN', 'HR'] %}
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('employees.edit_employee', employee_id=employee.id) }}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> Edit Employee</a>
+      <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deactivateModal"><i class="bi bi-slash-circle"></i> Deactivate</button>
+    </div>
+    <div class="modal fade" id="deactivateModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form method="POST" action="{{ url_for('employees.deactivate_employee', employee_id=employee.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-header"><h6 class="modal-title">Deactivate {{ employee.full_name }}?</h6></div>
+            <div class="modal-body">
+              <label class="form-label">Reason (optional)</label>
+              <input type="text" name="exit_reason" class="form-control">
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-danger">Deactivate</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if session_role in ['ADMIN', 'HR'] %}
+<div class="modal fade" id="photoModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title">Profile Picture — {{ employee.full_name }}</h6></div>
+    <form method="POST" action="{{ url_for('employees.upload_photo', employee_id=employee.id) }}" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-body">
+        <div class="text-center mb-3">
+          {{ avatar.render(employee, size=88, font_size=30) }}
+        </div>
+        <label class="form-label">Upload new photo</label>
+        <input type="file" name="profile_picture" class="form-control" accept=".jpg,.jpeg,.png,.webp" required>
+        <div class="form-text">JPG, JPEG, PNG or WebP. Max 3 MB.</div>
+      </div>
+      <div class="modal-footer justify-content-between">
+        {% if employee.profile_picture %}
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="document.getElementById('removePhotoForm').submit();">
+          <i class="bi bi-trash"></i> Remove Photo
+        </button>
+        {% else %}<span></span>{% endif %}
+        <div>
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Upload</button>
+        </div>
+      </div>
+    </form>
+  </div></div>
+</div>
+<form id="removePhotoForm" method="POST" action="{{ url_for('employees.remove_photo', employee_id=employee.id) }}" class="d-none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endif %}
+
+<ul class="nav nav-tabs mb-3" id="profileTabs">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-personal">Personal</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-work">Work</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-attendance">Attendance</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-leave">Leave</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-performance">Performance</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-salary">Salary</button></li>
+  {% if session_role in ['ADMIN', 'HR', 'MANAGER'] %}
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-risk">Risk</button></li>
+  {% endif %}
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-activity">Activity</button></li>
+</ul>
+
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="tab-personal">
+    <div class="card-flat">
+      <div class="row g-3">
+        <div class="col-md-4"><div class="text-muted small">Full Name</div><div class="fw-semibold">{{ employee.full_name }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Email</div><div class="fw-semibold">{{ employee.email }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Phone</div><div class="fw-semibold">{{ employee.phone or '-' }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Date of Birth</div><div class="fw-semibold">{{ employee.date_of_birth|dateformat }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Gender</div><div class="fw-semibold">{{ employee.gender or '-' }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Emergency Contact</div><div class="fw-semibold">{{ employee.emergency_contact or '-' }}</div></div>
+        <div class="col-md-8"><div class="text-muted small">Address</div><div class="fw-semibold">{{ employee.address or '-' }}</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="tab-work">
+    <div class="card-flat">
+      <div class="row g-3">
+        <div class="col-md-4"><div class="text-muted small">Employee ID</div><div class="fw-semibold">{{ employee.employee_code }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Department</div><div class="fw-semibold">{{ employee.department.name if employee.department else '-' }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Designation</div><div class="fw-semibold">{{ employee.job_title or '-' }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Manager</div><div class="fw-semibold">{{ employee.manager_name or '-' }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Joining Date</div><div class="fw-semibold">{{ employee.joining_date|dateformat }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Employment Type</div><div class="fw-semibold">{{ employee.employment_type }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Location</div><div class="fw-semibold">{{ employee.location or '-' }}</div></div>
+        <div class="col-md-8"><div class="text-muted small">Skills</div><div class="fw-semibold">{{ employee.skills or '-' }}</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="tab-attendance">
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-3"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ present_days }}</div><div class="text-muted small">Present Days</div></div></div>
+      <div class="col-6 col-md-3"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ absent_days }}</div><div class="text-muted small">Absent Days</div></div></div>
+      <div class="col-6 col-md-3"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ late_days }}</div><div class="text-muted small">Late Days</div></div></div>
+      <div class="col-6 col-md-3"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ attendance_pct }}%</div><div class="text-muted small">Attendance %</div></div></div>
+    </div>
+    <div class="card-flat">
+      <div class="table-responsive"><table class="table">
+        <thead><tr><th>Date</th><th>Status</th><th>Check In</th><th>Check Out</th></tr></thead>
+        <tbody>
+        {% for a in attendance_records %}
+          <tr><td>{{ a.date|dateformat }}</td><td><span class="badge-status badge-{{ a.status|lower|replace(' ', '') }}">{{ a.status }}</span></td><td>{{ a.check_in or '-' }}</td><td>{{ a.check_out or '-' }}</td></tr>
+        {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-3">No attendance records.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="tab-leave">
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-4"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ total_leave }}</div><div class="text-muted small">Total Leave</div></div></div>
+      <div class="col-6 col-md-4"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ used_leave }}</div><div class="text-muted small">Used Leave</div></div></div>
+      <div class="col-6 col-md-4"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ remaining_leave }}</div><div class="text-muted small">Remaining Leave</div></div></div>
+    </div>
+    <div class="card-flat">
+      <div class="table-responsive"><table class="table">
+        <thead><tr><th>Type</th><th>From</th><th>To</th><th>Days</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for l in leave_history %}
+          <tr><td>{{ l.leave_type }}</td><td>{{ l.start_date|dateformat }}</td><td>{{ l.end_date|dateformat }}</td><td>{{ l.days }}</td><td><span class="badge-status badge-{{ l.status|lower }}">{{ l.status }}</span></td></tr>
+        {% else %}
+          <tr><td colspan="5" class="text-center text-muted py-3">No leave history.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="tab-performance">
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-6"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ latest_rating or '-' }}</div><div class="text-muted small">Latest Rating</div></div></div>
+      <div class="col-6 col-md-6"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ previous_rating or '-' }}</div><div class="text-muted small">Previous Rating</div></div></div>
+    </div>
+    <div class="card-flat">
+      <div class="table-responsive"><table class="table">
+        <thead><tr><th>Date</th><th>Reviewer</th><th>Rating</th><th>Comments</th></tr></thead>
+        <tbody>
+        {% for r in reviews %}
+          <tr><td>{{ r.review_date|dateformat }}</td><td>{{ r.reviewer or '-' }}</td><td>{{ r.overall_rating }}/5</td><td>{{ r.comments or '-' }}</td></tr>
+        {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-3">No performance reviews yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="tab-salary">
+    <div class="row g-3 mb-3">
+      <div class="col-md-6"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ employee.salary|money }}</div><div class="text-muted small">Current Salary</div></div></div>
+      <div class="col-md-6"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ salary_history[0].effective_date|dateformat if salary_history else '-' }}</div><div class="text-muted small">Last Increment</div></div></div>
+    </div>
+
+    {% if benchmark %}
+    <div class="card-flat mb-3">
+      <div class="section-title mb-3"><i class="bi bi-graph-up"></i> Salary Benchmarking</div>
+      <div class="row g-3">
+        {% if benchmark.department %}
+        <div class="col-md-6">
+          <div class="p-3 rounded" style="background:var(--bg);">
+            <div class="text-muted small mb-1">vs {{ benchmark.department.label }} Department Average</div>
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold">{{ benchmark.department.average|money }}</div>
+                <div class="text-muted small">department average</div>
+              </div>
+              <div class="text-end">
+                <div class="fw-bold {{ 'text-danger' if benchmark.department.difference_pct < -5 else ('text-success' if benchmark.department.difference_pct > 5 else 'text-muted') }}">
+                  {{ '+' if benchmark.department.difference_pct > 0 }}{{ benchmark.department.difference_pct }}%
+                </div>
+                <span class="badge-status badge-inactive">{{ benchmark.department.position }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        {% if benchmark.job_title %}
+        <div class="col-md-6">
+          <div class="p-3 rounded" style="background:var(--bg);">
+            <div class="text-muted small mb-1">vs {{ benchmark.job_title.label }} Average ({{ benchmark.job_title.peer_count }} peers)</div>
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold">{{ benchmark.job_title.average|money }}</div>
+                <div class="text-muted small">job title average</div>
+              </div>
+              <div class="text-end">
+                <div class="fw-bold {{ 'text-danger' if benchmark.job_title.difference_pct < -5 else ('text-success' if benchmark.job_title.difference_pct > 5 else 'text-muted') }}">
+                  {{ '+' if benchmark.job_title.difference_pct > 0 }}{{ benchmark.job_title.difference_pct }}%
+                </div>
+                <span class="badge-status badge-inactive">{{ benchmark.job_title.position }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="text-muted small mt-3"><i class="bi bi-info-circle"></i> Benchmarks compare against active employees only. Differences may be justified by seniority, performance, or location.</div>
+    </div>
+    {% endif %}
+    <div class="card-flat">
+      <div class="table-responsive"><table class="table">
+        <thead><tr><th>Effective Date</th><th>Base</th><th>Bonus</th><th>Deduction</th><th>Net</th></tr></thead>
+        <tbody>
+        {% for s in salary_history %}
+          <tr><td>{{ s.effective_date|dateformat }}</td><td>{{ s.base_salary|money }}</td><td>{{ s.bonus|money }}</td><td>{{ s.deduction|money }}</td><td class="fw-semibold">{{ s.net_salary|money }}</td></tr>
+        {% else %}
+          <tr><td colspan="5" class="text-center text-muted py-3">No salary history.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  {% if session_role in ['ADMIN', 'HR', 'MANAGER'] %}
+  <div class="tab-pane fade" id="tab-risk">
+    {% if risk %}
+    <div class="alert alert-warning small">
+      <i class="bi bi-info-circle"></i>
+      This is a statistical prediction based on patterns <em>associated</em> with past attrition — not a
+      guaranteed outcome, and not a statement of cause. Use it to prompt a supportive conversation,
+      never as the sole basis for an employment decision.
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <div class="card-flat text-center">
+          <div class="fw-bold display-6 {{ 'text-danger' if risk.risk_level == 'HIGH' else ('text-warning' if risk.risk_level == 'MEDIUM' else 'text-success') }}">{{ risk.risk_probability }}%</div>
+          <div class="text-muted small">Estimated attrition risk</div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card-flat text-center d-flex flex-column justify-content-center h-100">
+          <div><span class="badge-status {{ 'badge-resigned' if risk.risk_level == 'HIGH' else ('badge-pending' if risk.risk_level == 'MEDIUM' else 'badge-active') }}" style="font-size:0.9rem;">{{ risk.risk_level }} RISK</span></div>
+          <div class="text-muted small mt-2">Risk level</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-flat">
+      <div class="section-title mb-3">Signals for this employee</div>
+      <div class="row g-3">
+        <div class="col-md-4"><div class="text-muted small">Tenure</div><div class="fw-semibold">{{ risk.tenure_years }} years</div></div>
+        <div class="col-md-4"><div class="text-muted small">Performance</div><div class="fw-semibold">{{ risk.performance if risk.performance else 'No reviews' }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Attendance (90d)</div><div class="fw-semibold">{{ attendance_rate_90d if attendance_rate_90d else 'No data' }}{{ '%' if attendance_rate_90d }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">Approved leave (12m)</div><div class="fw-semibold">{{ leave_days_12m }} days</div></div>
+      </div>
+      <div class="mt-3">
+        <a href="{{ url_for('intelligence.attrition_risk') }}" class="btn btn-sm btn-outline-primary">View full risk model</a>
+      </div>
+    </div>
+    {% else %}
+    <div class="card-flat text-center py-5">
+      <i class="bi bi-shield-exclamation display-5 text-muted mb-3 d-block"></i>
+      <h6 class="fw-bold">Attrition risk not available</h6>
+      <p class="text-muted mb-0">
+        {{ risk_unavailable or 'This employee is not currently scored (risk is only predicted for active employees).' }}
+      </p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="tab-pane fade" id="tab-activity">
+    <div class="card-flat">
+      <div class="section-title mb-3">Activity Timeline</div>
+      {% if activity %}
+      <div class="position-relative">
+        {% for a in activity %}
+        <div class="d-flex gap-3 pb-3 {{ 'border-bottom mb-3' if not loop.last }}">
+          <div class="kpi-icon" style="flex-shrink:0;width:36px;height:36px;"><i class="bi {{ a.icon }}"></i></div>
+          <div class="flex-grow-1">
+            <div class="fw-semibold">{{ a.title }}</div>
+            <div class="text-muted small">{{ a.detail }}</div>
+          </div>
+          <div class="text-muted small text-nowrap">{{ a.date|dateformat }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-muted text-center py-4">No recorded activity for this employee yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

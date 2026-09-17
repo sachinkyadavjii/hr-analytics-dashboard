@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Top Performers · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Top Performers</h4>
+    <div class="section-subtitle">Ranked by average performance rating from completed reviews.</div>
+  </div>
+</div>
+
+<div class="card-flat mb-3">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label">Department</label>
+      <select name="department" class="form-select">
+        <option value="">All Departments</option>
+        {% for d in departments %}
+        <option value="{{ d.name }}" {{ 'selected' if filters.department == d.name }}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Period</label>
+      <select name="months" class="form-select">
+        <option value="">All time</option>
+        <option value="6" {{ 'selected' if filters.months == '6' }}>Last 6 months</option>
+        <option value="12" {{ 'selected' if filters.months == '12' }}>Last 12 months</option>
+        <option value="24" {{ 'selected' if filters.months == '24' }}>Last 24 months</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Show</label>
+      <select name="limit" class="form-select">
+        {% for n in [10, 20, 50] %}<option value="{{ n }}" {{ 'selected' if filters.limit == n }}>Top {{ n }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Apply</button>
+    </div>
+  </form>
+</div>
+
+<div class="card-flat">
+  {% if performers %}
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead><tr><th style="width:70px;">Rank</th><th>Employee</th><th>Department</th><th>Job Title</th><th>Reviews</th><th>Performance Score</th></tr></thead>
+      <tbody>
+        {% for p in performers %}
+        <tr>
+          <td>
+            {% if p.rank <= 3 %}
+            <span class="badge rounded-pill" style="background:{{ '#f7c948' if p.rank == 1 else ('#c5ccd6' if p.rank == 2 else '#d9a06b') }};color:#fff;font-size:0.8rem;">#{{ p.rank }}</span>
+            {% else %}
+            <span class="text-muted fw-semibold">#{{ p.rank }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('employees.view_employee', employee_id=p.employee_id) }}" class="d-flex align-items-center gap-2 text-decoration-none text-dark">
+              {% if p.profile_picture %}
+              <img src="{{ url_for('static', filename=p.profile_picture) }}" class="avatar-photo" style="width:32px;height:32px;" alt="{{ p.name }}">
+              {% else %}
+              <div class="avatar-circle" style="width:32px;height:32px;">{{ p.initials }}</div>
+              {% endif %}
+              <span class="fw-semibold">{{ p.name }}</span>
+            </a>
+          </td>
+          <td>{{ p.department }}</td>
+          <td>{{ p.job_title or '-' }}</td>
+          <td>{{ p.review_count }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height:6px;max-width:100px;">
+                <div class="progress-bar bg-success" style="width: {{ (p.avg_rating / 5 * 100)|round }}%;"></div>
+              </div>
+              <span class="fw-semibold">{{ p.avg_rating }}/5</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-5">
+    <i class="bi bi-trophy display-4 text-muted mb-3 d-block"></i>
+    <h6 class="fw-bold">No performance reviews found</h6>
+    <p class="text-muted mb-0">Rankings appear once performance reviews have been recorded for the selected filters.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

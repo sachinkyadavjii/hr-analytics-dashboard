@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Uploaded Datasets · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Uploaded Dataset Insights</h4>
+    <div class="section-subtitle">Analyze external HR data without touching your production database.</div>
+  </div>
+  <a href="{{ url_for('data_upload.upload') }}" class="btn btn-primary"><i class="bi bi-cloud-upload"></i> Upload Dataset</a>
+</div>
+
+{% if datasets %}
+<div class="card-flat">
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead><tr><th>File</th><th>Type</th><th>Rows</th><th>Columns</th><th>Uploaded By</th><th>Uploaded At</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+      <tbody>
+      {% for d in datasets %}
+        <tr>
+          <td class="fw-semibold"><i class="bi bi-filetype-{{ 'csv' if d.file_type == 'csv' else 'xlsx' }} me-1"></i>{{ d.original_filename }}</td>
+          <td>{{ d.file_type|upper }}</td>
+          <td>{{ d.row_count }}</td>
+          <td>{{ d.column_count }}</td>
+          <td>{{ d.uploaded_by or '-' }}</td>
+          <td>{{ d.uploaded_at.strftime('%d %b %Y, %I:%M %p') }}</td>
+          <td>
+            {% if d.status == 'ready' %}<span class="badge-status badge-active">Ready</span>
+            {% elif d.status == 'pending_mapping' %}<span class="badge-status badge-pending">Needs Mapping</span>
+            {% else %}<span class="badge-status badge-inactive">{{ d.status }}</span>{% endif %}
+          </td>
+          <td class="text-end">
+            {% if d.status == 'ready' %}
+            <a href="{{ url_for('data_upload.insights', dataset_id=d.id) }}" class="btn btn-sm btn-outline-primary">Insights</a>
+            <a href="{{ url_for('data_upload.compare', dataset_id=d.id) }}" class="btn btn-sm btn-light">Compare</a>
+            {% else %}
+            <a href="{{ url_for('data_upload.mapping', dataset_id=d.id) }}" class="btn btn-sm btn-warning">Map Columns</a>
+            {% endif %}
+            <a href="{{ url_for('data_upload.quality', dataset_id=d.id) }}" class="btn btn-sm btn-light">Quality</a>
+            <form method="POST" action="{{ url_for('data_upload.delete', dataset_id=d.id) }}" class="d-inline" onsubmit="return confirm('Remove this dataset?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-light text-danger"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card-flat text-center py-5">
+  <i class="bi bi-cloud-upload display-4 text-muted mb-3"></i>
+  <h5 class="fw-bold">No datasets uploaded yet</h5>
+  <p class="text-muted">Upload a CSV or Excel file to get instant HR analytics — without touching your production data.</p>
+  <a href="{{ url_for('data_upload.upload') }}" class="btn btn-primary mx-auto">Upload Your First Dataset</a>
+</div>
+{% endif %}
+{% endblock %}

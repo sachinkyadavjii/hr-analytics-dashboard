@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Attrition Risk · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Attrition Risk Prediction</h4>
+    <div class="section-subtitle">Machine-learning estimate of attrition likelihood for current employees.</div>
+  </div>
+</div>
+
+{% if not result.available %}
+<div class="card-flat text-center py-5">
+  <i class="bi bi-exclamation-circle display-4 text-muted mb-3 d-block"></i>
+  <h5 class="fw-bold">{{ result.message }}</h5>
+  {% if result.detail %}<p class="text-muted mb-3">{{ result.detail }}</p>{% endif %}
+  {% if result.info %}
+  <div class="text-muted small">
+    Current data: {{ result.info.rows }} employees &middot; {{ result.info.leavers }} leavers &middot; {{ result.info.stayers }} current
+  </div>
+  {% endif %}
+  <p class="text-muted small mt-3 mb-0">No predictions are shown rather than displaying unreliable estimates.</p>
+</div>
+{% else %}
+
+<div class="alert alert-warning">
+  <i class="bi bi-info-circle"></i>
+  <strong>These are statistical predictions, not guaranteed outcomes.</strong>
+  The model identifies patterns <em>associated</em> with past attrition — it does not establish causation.
+  Use these scores to prompt supportive conversations, never as the sole basis for an employment decision.
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3"><div class="card-flat text-center"><div class="fw-bold fs-4 text-danger">{{ counts.HIGH }}</div><div class="text-muted small">High Risk</div></div></div>
+  <div class="col-6 col-md-3"><div class="card-flat text-center"><div class="fw-bold fs-4 text-warning">{{ counts.MEDIUM }}</div><div class="text-muted small">Medium Risk</div></div></div>
+  <div class="col-6 col-md-3"><div class="card-flat text-center"><div class="fw-bold fs-4 text-success">{{ counts.LOW }}</div><div class="text-muted small">Low Risk</div></div></div>
+  <div class="col-6 col-md-3"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ result.metrics.roc_auc or '—' }}</div><div class="text-muted small">Model ROC-AUC</div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="card-flat h-100">
+      <div class="section-title mb-3">Contributing Factors</div>
+      <div class="text-muted small mb-3">Feature importance from the trained model. These indicate <em>association</em> with past attrition, not cause.</div>
+      {% for f in result.factors %}
+      <div class="mb-2">
+        <div class="d-flex justify-content-between small mb-1">
+          <span class="fw-semibold">{{ f.feature }}</span>
+          <span class="text-muted">{{ f.weight }}</span>
+        </div>
+        <div class="progress" style="height:6px;">
+          <div class="progress-bar" style="width: {{ (f.weight|abs * 100 / (result.factors[0].weight|abs or 1))|round }}%;"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card-flat h-100">
+      <div class="section-title mb-3">Model Details</div>
+      <table class="table table-sm mb-0">
+        <tbody>
+          <tr><td class="text-muted">Model</td><td class="fw-semibold">{{ result.model_name.replace('_', ' ')|title }}</td></tr>
+          <tr><td class="text-muted">Accuracy (held-out)</td><td class="fw-semibold">{{ result.metrics.accuracy }}</td></tr>
+          <tr><td class="text-muted">ROC-AUC</td><td class="fw-semibold">{{ result.metrics.roc_auc or 'n/a' }}</td></tr>
+          <tr><td class="text-muted">Training rows</td><td>{{ result.metrics.training_rows }}</td></tr>
+          <tr><td class="text-muted">Test rows</td><td>{{ result.metrics.test_rows }}</td></tr>
+          <tr><td class="text-muted">Leavers / Stayers</td><td>{{ result.metrics.leavers }} / {{ result.metrics.stayers }}</td></tr>
+        </tbody>
+      </table>
+      {% if result.metrics.excluded_features %}
+      <div class="alert alert-info mt-3 mb-0 py-2 small">
+        <strong>Excluded to prevent data leakage:</strong>
+        {{ result.metrics.excluded_features|join(', ') }} — recorded for current employees but not past ones,
+        so including them would let the model "cheat".
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card-flat mb-3">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label">Model</label>
+      <select name="model" class="form-select">
+        <option value="random_forest" {{ 'selected' if model_name == 'random_forest' }}>Random Forest</option>
+        <option value="logistic_regression" {{ 'selected' if model_name == 'logistic_regression' }}>Logistic Regression</option>
+        <option value="decision_tree" {{ 'selected' if model_name == 'decision_tree' }}>Decision Tree</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Risk Level</label>
+      <select name="level" class="form-select">
+        <option value="">All levels</option>
+        {% for lvl in ['HIGH', 'MEDIUM', 'LOW'] %}
+        <option value="{{ lvl }}" {{ 'selected' if level_filter == lvl }}>{{ lvl }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Apply</button></div>
+  </form>
+</div>
+
+<div class="card-flat">
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead><tr><th>Employee</th><th>Department</th><th>Job Title</th><th>Tenure</th><th>Performance</th><th>Risk Probability</th><th>Level</th></tr></thead>
+      <tbody>
+        {% for p in predictions %}
+        <tr>
+          <td>
+            <a href="{{ url_for('employees.view_employee', employee_id=p.employee_id) }}" class="d-flex align-items-center gap-2 text-decoration-none text-dark">
+              {% if p.profile_picture %}
+              <img src="{{ url_for('static', filename=p.profile_picture) }}" class="avatar-photo" style="width:30px;height:30px;" alt="">
+              {% else %}
+              <div class="avatar-circle" style="width:30px;height:30px;">{{ p.name[:1] }}</div>
+              {% endif %}
+              <span class="fw-semibold">{{ p.name }}</span>
+            </a>
+          </td>
+          <td>{{ p.department }}</td>
+          <td>{{ p.job_title }}</td>
+          <td>{{ p.tenure_years }} yrs</td>
+          <td>{{ p.performance if p.performance else '—' }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height:6px;max-width:90px;">
+                <div class="progress-bar {{ 'bg-danger' if p.risk_level == 'HIGH' else ('bg-warning' if p.risk_level == 'MEDIUM' else 'bg-success') }}" style="width: {{ p.risk_probability }}%;"></div>
+              </div>
+              <span class="fw-semibold">{{ p.risk_probability }}%</span>
+            </div>
+          </td>
+          <td><span class="badge-status {{ 'badge-resigned' if p.risk_level == 'HIGH' else ('badge-pending' if p.risk_level == 'MEDIUM' else 'badge-active') }}">{{ p.risk_level }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-4">No employees match this risk level.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

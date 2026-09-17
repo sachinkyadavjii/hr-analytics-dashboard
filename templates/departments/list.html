@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Departments · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="fw-bold mb-0">Departments</h4>
+  {% if session_role in ['ADMIN', 'HR'] %}
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDeptModal"><i class="bi bi-plus-lg"></i> Add Department</button>
+  {% endif %}
+</div>
+
+<div class="card-flat">
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead><tr><th>Department</th><th>Manager</th><th>Employee Count</th><th>Average Salary</th><th>Attrition Rate</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+      <tbody>
+      {% for row in rows %}
+        <tr>
+          <td class="fw-semibold">{{ row.department.name }}</td>
+          <td>{{ row.department.manager_name or '-' }}</td>
+          <td>{{ row.employee_count }}</td>
+          <td>{{ row.avg_salary|money }}</td>
+          <td>{{ row.attrition_rate }}%</td>
+          <td><span class="badge-status badge-{{ row.department.status|lower }}">{{ row.department.status }}</span></td>
+          <td class="text-end">
+            {% if session_role in ['ADMIN', 'HR'] %}
+            <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#editDeptModal{{ row.department.id }}"><i class="bi bi-pencil"></i></button>
+            <form method="POST" action="{{ url_for('departments.deactivate_department', dept_id=row.department.id) }}" class="d-inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-light text-danger"><i class="bi bi-slash-circle"></i></button>
+            </form>
+            <div class="modal fade" id="editDeptModal{{ row.department.id }}" tabindex="-1">
+              <div class="modal-dialog"><div class="modal-content">
+                <form method="POST" action="{{ url_for('departments.edit_department', dept_id=row.department.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <div class="modal-header"><h6 class="modal-title">Edit Department</h6></div>
+                  <div class="modal-body">
+                    <label class="form-label">Name</label>
+                    <input type="text" name="name" class="form-control mb-3" value="{{ row.department.name }}">
+                    <label class="form-label">Manager</label>
+                    <input type="text" name="manager_name" class="form-control" value="{{ row.department.manager_name or '' }}">
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                  </div>
+                </form>
+              </div></div>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-4">No departments yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="addDeptModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <form method="POST" action="{{ url_for('departments.add_department') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-header"><h6 class="modal-title">Add Department</h6></div>
+      <div class="modal-body">
+        <label class="form-label">Name</label>
+        <input type="text" name="name" class="form-control mb-3" required>
+        <label class="form-label">Manager</label>
+        <input type="text" name="manager_name" class="form-control">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+{% endblock %}

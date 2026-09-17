@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Compare Dataset · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{{ url_for('data_upload.insights', dataset_id=dataset.id) }}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">Compare: Uploaded Dataset vs Main HR Database</h4>
+</div>
+
+<div class="card-flat mb-4">
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead><tr><th>Metric</th><th>Uploaded Dataset — {{ dataset.original_filename }}</th><th>Main HR Database</th></tr></thead>
+      <tbody>
+      {% for label, uploaded_val, main_val in rows %}
+        <tr>
+          <td class="fw-semibold">{{ label }}</td>
+          <td>{% if uploaded_val == na_label %}<span class="text-muted fst-italic">Not available</span>{% else %}{{ "{:,.0f}".format(uploaded_val) if uploaded_val is number and uploaded_val > 1000 else uploaded_val }}{% endif %}</td>
+          <td>{{ "{:,.0f}".format(main_val) if main_val is number and main_val > 1000 else main_val }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card-flat h-100">
+      <div class="section-title mb-3">Headcount by Department</div>
+      {% if uploaded_dept %}<canvas id="c1" height="160"></canvas><div class="text-muted small mt-2">Uploaded Dataset</div>{% else %}<div class="text-muted">Not available in uploaded dataset</div>{% endif %}
+      <hr>
+      <canvas id="c2" height="160"></canvas><div class="text-muted small mt-2">Main HR Database</div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card-flat h-100">
+      <div class="section-title mb-3">Gender Distribution</div>
+      {% if uploaded_gender %}<canvas id="c3" height="160"></canvas><div class="text-muted small mt-2">Uploaded Dataset</div>{% else %}<div class="text-muted">Not available in uploaded dataset</div>{% endif %}
+      <hr>
+      <canvas id="c4" height="160"></canvas><div class="text-muted small mt-2">Main HR Database</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const palette = ["#2f6bff", "#f97066", "#12b76a", "#f79009", "#9b8afb", "#06aed4"];
+function bar(id, labels, data) {
+  const el = document.getElementById(id); if (!el) return;
+  new Chart(el, { type: 'bar', data: { labels: labels, datasets: [{ data: data, backgroundColor: '#2f6bff', borderRadius: 6 }] }, options: { plugins: { legend: { display: false } } } });
+}
+function doughnut(id, labels, data) {
+  const el = document.getElementById(id); if (!el) return;
+  new Chart(el, { type: 'doughnut', data: { labels: labels, datasets: [{ data: data, backgroundColor: palette }] }, options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } } });
+}
+{% if uploaded_dept %}bar('c1', {{ uploaded_dept.labels|tojson }}, {{ uploaded_dept.data|tojson }});{% endif %}
+bar('c2', {{ main_dept.labels|tojson }}, {{ main_dept.data|tojson }});
+{% if uploaded_gender %}doughnut('c3', {{ uploaded_gender.labels|tojson }}, {{ uploaded_gender.data|tojson }});{% endif %}
+doughnut('c4', {{ main_gender.labels|tojson }}, {{ main_gender.data|tojson }});
+</script>
+{% endblock %}

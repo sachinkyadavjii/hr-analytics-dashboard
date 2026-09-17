@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ employee.full_name }} · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{{ url_for('employees.view_employee', employee_id=employee.id) }}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">Edit {{ employee.full_name }}</h4>
+</div>
+
+<form method="POST" class="card-flat">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="section-title mb-3">Personal Information</div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><label class="form-label">First Name *</label><input type="text" name="first_name" class="form-control" required value="{{ employee.first_name }}"></div>
+    <div class="col-md-3"><label class="form-label">Last Name *</label><input type="text" name="last_name" class="form-control" required value="{{ employee.last_name }}"></div>
+    <div class="col-md-3"><label class="form-label">Email *</label><input type="email" name="email" class="form-control" required value="{{ employee.email }}"></div>
+    <div class="col-md-3"><label class="form-label">Phone</label><input type="text" name="phone" class="form-control" value="{{ employee.phone or '' }}"></div>
+    <div class="col-md-3"><label class="form-label">Date of Birth</label><input type="date" name="date_of_birth" class="form-control" value="{{ employee.date_of_birth }}"></div>
+    <div class="col-md-3"><label class="form-label">Gender</label>
+      <select name="gender" class="form-select">
+        {% for g in ['Male','Female','Other'] %}<option {{ 'selected' if employee.gender == g }}>{{ g }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-6"><label class="form-label">Address</label><input type="text" name="address" class="form-control" value="{{ employee.address or '' }}"></div>
+    <div class="col-md-6"><label class="form-label">Emergency Contact</label><input type="text" name="emergency_contact" class="form-control" value="{{ employee.emergency_contact or '' }}"></div>
+  </div>
+
+  <div class="section-title mb-3">Work Information</div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><label class="form-label">Employee ID *</label><input type="text" name="employee_code" class="form-control" required value="{{ employee.employee_code }}"></div>
+    <div class="col-md-3"><label class="form-label">Department</label>
+      <select name="department_id" class="form-select">
+        <option value="">Unassigned</option>
+        {% for d in departments %}<option value="{{ d.id }}" {{ 'selected' if employee.department_id == d.id }}>{{ d.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3"><label class="form-label">Job Title</label><input type="text" name="job_title" class="form-control" value="{{ employee.job_title or '' }}"></div>
+    <div class="col-md-3"><label class="form-label">Manager</label><input type="text" name="manager_name" class="form-control" value="{{ employee.manager_name or '' }}"></div>
+    <div class="col-md-3"><label class="form-label">Joining Date</label><input type="date" name="joining_date" class="form-control" value="{{ employee.joining_date }}"></div>
+    <div class="col-md-3"><label class="form-label">Employment Type</label>
+      <select name="employment_type" class="form-select">
+        {% for t in ['Full-Time','Part-Time','Contract','Intern'] %}<option {{ 'selected' if employee.employment_type == t }}>{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3"><label class="form-label">Location</label><input type="text" name="location" class="form-control" value="{{ employee.location or '' }}"></div>
+    <div class="col-md-3"><label class="form-label">Status</label>
+      <select name="status" class="form-select" id="statusSelect">
+        {% for s in ['Active','On Leave','Inactive','Resigned','Terminated'] %}<option {{ 'selected' if employee.status == s }}>{{ s }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-6" id="exitReasonWrap" style="{{ '' if employee.status in ['Resigned','Terminated'] else 'display:none;' }}">
+      <label class="form-label">Exit Reason</label>
+      <select name="exit_reason" class="form-select">
+        {% for r in ['Better Opportunity','Salary','Career Growth','Work Environment','Relocation','Personal Reasons'] %}
+        <option {{ 'selected' if employee.exit_reason == r }}>{{ r }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="section-title mb-3">Employment Information</div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-4"><label class="form-label">Salary (₹/month)</label><input type="number" step="0.01" name="salary" class="form-control" value="{{ employee.salary }}"></div>
+    <div class="col-md-4"><label class="form-label">Work Experience (years)</label><input type="number" step="0.1" name="experience_years" class="form-control" value="{{ employee.experience_years }}"></div>
+    <div class="col-md-4"><label class="form-label">Skills</label><input type="text" name="skills" class="form-control" value="{{ employee.skills or '' }}"></div>
+  </div>
+
+  <div class="d-flex justify-content-end gap-2">
+    <a href="{{ url_for('employees.view_employee', employee_id=employee.id) }}" class="btn btn-light">Cancel</a>
+    <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('statusSelect').addEventListener('change', function () {
+  document.getElementById('exitReasonWrap').style.display = ['Resigned', 'Terminated'].includes(this.value) ? '' : 'none';
+});
+</script>
+{% endblock %}
