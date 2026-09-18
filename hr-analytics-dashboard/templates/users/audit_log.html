@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Audit Log · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{{ url_for('users.list_users') }}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">Account Audit Log</h4>
+</div>
+
+<div class="alert alert-info small">
+  <i class="bi bi-shield-check"></i> This log tracks account-level security actions only. Passwords are never recorded here, in any form.
+</div>
+
+<div class="card-flat">
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead><tr><th>Action</th><th>Performed By</th><th>Target User</th><th>Details</th><th>Date/Time</th></tr></thead>
+      <tbody>
+      {% for e in entries %}
+        <tr>
+          <td><span class="badge bg-light text-dark border">{{ e.action }}</span></td>
+          <td>{{ e.performed_by }} <span class="text-muted small">({{ e.performed_by_role or '-' }})</span></td>
+          <td>{{ e.target_user or '-' }}</td>
+          <td class="text-muted small">{{ e.details or '-' }}</td>
+          <td>{{ e.created_at.strftime('%d %b %Y, %I:%M %p') }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-4">No audit log entries yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

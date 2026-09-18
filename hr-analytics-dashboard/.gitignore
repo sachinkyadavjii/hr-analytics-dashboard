@@ -1,0 +1,36 @@
+# Environment / secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Database (local dev only — do not commit real data)
+instance/*.db
+instance/*.sqlite3
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs
+*.log
+
+# Distribution / packaging
+build/
+dist/
+
+# Uploaded files (user data — should not be committed)
+static/uploads/profile_pics/*
+!static/uploads/profile_pics/.gitkeep
+instance/uploads/

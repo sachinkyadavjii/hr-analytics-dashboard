@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}HR Assistant · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">AI HR Assistant</h4>
+    <div class="section-subtitle">Ask questions about your HR analytics in plain English.</div>
+  </div>
+  <span class="badge-status {{ 'badge-active' if llm_configured else 'badge-inactive' }}">
+    {{ 'AI-assisted mode' if llm_configured else 'Rule-based mode' }}
+  </span>
+</div>
+
+<div class="card-flat mb-3">
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="input-group">
+      <input type="text" name="question" class="form-control" placeholder="e.g. Which department has the highest attrition?"
+             value="{{ question }}" autofocus>
+      <button type="submit" class="btn btn-primary px-4"><i class="bi bi-send"></i> Ask</button>
+    </div>
+  </form>
+
+  <div class="mt-3">
+    <div class="text-muted small mb-2">Try asking:</div>
+    <div class="d-flex flex-wrap gap-2">
+      {% for s in suggestions %}
+      <form method="POST" class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="question" value="{{ s }}">
+        <button type="submit" class="btn btn-sm btn-light border">{{ s }}</button>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% if response %}
+<div class="card-flat mb-3">
+  <div class="d-flex gap-3">
+    <div class="kpi-icon" style="flex-shrink:0;"><i class="bi bi-robot"></i></div>
+    <div class="flex-grow-1">
+      <div class="fw-semibold mb-1">{{ response.answer }}</div>
+      <div class="text-muted small">
+        Answered in {{ response.mode }} mode
+        {% if not response.allowed %} &middot; access restricted by your role{% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if response.metrics %}
+  <hr>
+  <div class="text-muted small mb-2">Supporting metrics used for this answer:</div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <tbody>
+      {% for key, value in response.metrics.items() %}
+        <tr>
+          <td class="text-muted" style="width:220px;">{{ key.replace('_', ' ')|title }}</td>
+          <td>
+            {% if value is mapping %}
+              {% for k, v in value.items() %}<span class="badge bg-light text-dark border me-1">{{ k }}: {{ v }}</span>{% endfor %}
+            {% elif value is iterable and value is not string %}
+              {% for item in value[:4] %}<div class="small">{{ item.message if item.message is defined else item }}</div>{% endfor %}
+            {% else %}
+              {{ value }}
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="card-flat">
+  <div class="section-title mb-2"><i class="bi bi-shield-check"></i> How this works &amp; what it can see</div>
+  <ul class="text-muted small mb-0">
+    <li>The assistant has <strong>no direct database access</strong>. It can only call a fixed set of aggregated metric functions.</li>
+    <li>It never sees passwords, password hashes, session data, or individual contact details.</li>
+    <li>Role permissions are enforced before any metric is computed — EMPLOYEE-role users cannot query company-wide analytics.</li>
+    <li>{% if llm_configured %}An AI model summarises the aggregated metrics into natural language. The model only ever receives those aggregated numbers, never raw records.{% else %}No AI API key is configured, so answers come from the built-in rule-based engine. The application works fully without one; set <code>ANTHROPIC_API_KEY</code> to enable natural-language summarisation.{% endif %}</li>
+  </ul>
+</div>
+{% endblock %}

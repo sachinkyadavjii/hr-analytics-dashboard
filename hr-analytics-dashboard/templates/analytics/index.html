@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Analytics · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h4 class="fw-bold mb-0">HR Analytics</h4>
+  <a href="{{ url_for('analytics.attrition') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-graph-down-arrow"></i> Attrition Deep Dive</a>
+</div>
+
+<div class="card-flat mb-4">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-2">
+      <label class="form-label">Department</label>
+      <select name="department" class="form-select">
+        <option value="">All</option>
+        {% for d in departments %}<option value="{{ d.name }}" {{ 'selected' if filters.department == d.name }}>{{ d.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Location</label>
+      <select name="location" class="form-select">
+        <option value="">All</option>
+        {% for l in locations %}<option value="{{ l }}" {{ 'selected' if filters.location == l }}>{{ l }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Employment Type</label>
+      <select name="employment_type" class="form-select">
+        <option value="">All</option>
+        {% for t in ['Full-Time','Part-Time','Contract','Intern'] %}<option {{ 'selected' if filters.employment_type == t }}>{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Gender</label>
+      <select name="gender" class="form-select">
+        <option value="">All</option>
+        {% for g in ['Male','Female','Other'] %}<option {{ 'selected' if filters.gender == g }}>{{ g }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2"><label class="form-label">From</label><input type="date" name="start_date" class="form-control" value="{{ filters.start_date }}"></div>
+    <div class="col-md-2"><label class="form-label">To</label><input type="date" name="end_date" class="form-control" value="{{ filters.end_date }}"></div>
+    <div class="col-12"><button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Apply Filters</button>
+      <a href="{{ url_for('analytics.index') }}" class="btn btn-light">Reset</a>
+    </div>
+  </form>
+</div>
+
+<div class="row g-3 mb-4">
+  {% set kpi_items = [
+    ('Total Employees', kpis.total_employees, ''),
+    ('Attrition Rate', kpis.attrition_rate, '%'),
+    ('Average Salary', kpis.average_salary, 'money'),
+    ('Average Tenure', kpis.average_tenure, ' yrs'),
+    ('Attendance Rate', kpis.attendance_rate, '%'),
+    ('Avg Performance', kpis.average_performance, '/5'),
+  ] %}
+  {% for label, value, suffix in kpi_items %}
+  <div class="col-6 col-md-2">
+    <div class="card-flat text-center">
+      <div class="fw-bold fs-5">{% if suffix == 'money' %}{{ value|money }}{% else %}{{ value }}{{ suffix }}{% endif %}</div>
+      <div class="text-muted small">{{ label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card-flat mb-4">
+  <div class="section-title mb-3"><i class="bi bi-lightbulb text-warning"></i> Business Insights</div>
+  <ul class="mb-0">
+    {% for insight in insights %}
+    <li class="mb-1">{{ insight }}</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Headcount by Department</div><canvas id="c1" height="180"></canvas></div></div>
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Employee Growth</div><canvas id="c2" height="180"></canvas></div></div>
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Attrition by Department</div><canvas id="c3" height="180"></canvas></div></div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Attrition by Experience</div><canvas id="c4" height="180"></canvas></div></div>
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Salary by Department</div><canvas id="c5" height="180"></canvas></div></div>
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Gender Distribution</div><canvas id="c6" height="180"></canvas></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Age Distribution</div><canvas id="c7" height="180"></canvas></div></div>
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Performance Distribution</div><canvas id="c8" height="180"></canvas></div></div>
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Attendance Trend</div><canvas id="c9" height="180"></canvas></div></div>
+</div>
+<div class="row g-3 mt-1">
+  <div class="col-lg-6"><div class="card-flat h-100"><div class="section-title mb-3">Hiring Trend</div><canvas id="c10" height="160"></canvas></div></div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+const palette = ["#2f6bff", "#f97066", "#12b76a", "#f79009", "#9b8afb", "#06aed4", "#ee46bc", "#667085"];
+function bar(id, labels, values, color, horizontal) {
+  new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ data: values, backgroundColor: color || '#2f6bff', borderRadius: 6 }] },
+    options: { indexAxis: horizontal ? 'y' : 'x', plugins: { legend: { display: false } } }
+  });
+}
+function doughnut(id, labels, values) {
+  new Chart(document.getElementById(id), {
+    type: 'doughnut',
+    data: { labels: labels, datasets: [{ data: values, backgroundColor: palette }] },
+    options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+}
+function line(id, labels, values, color) {
+  new Chart(document.getElementById(id), {
+    type: 'line',
+    data: { labels: labels, datasets: [{ data: values, borderColor: color || '#2f6bff', backgroundColor: 'rgba(47,107,255,0.08)', fill: true, tension: 0.35 }] },
+    options: { plugins: { legend: { display: false } } }
+  });
+}
+
+bar('c1', {{ charts.headcount_by_department.labels|tojson }}, {{ charts.headcount_by_department.data|tojson }}, '#2f6bff');
+line('c2', {{ charts.growth.labels|tojson }}, {{ charts.growth.data|tojson }}, '#2f6bff');
+bar('c3', {{ charts.attrition_by_department.labels|tojson }}, {{ charts.attrition_by_department.data|tojson }}, '#f97066');
+bar('c4', {{ charts.attrition_by_experience.labels|tojson }}, {{ charts.attrition_by_experience.data|tojson }}, '#f79009');
+bar('c5', {{ charts.salary_by_department.labels|tojson }}, {{ charts.salary_by_department.data|tojson }}, '#12b76a');
+doughnut('c6', {{ charts.gender.labels|tojson }}, {{ charts.gender.data|tojson }});
+bar('c7', {{ charts.age.labels|tojson }}, {{ charts.age.data|tojson }}, '#9b8afb');
+bar('c8', {{ charts.performance_distribution.labels|tojson }}, {{ charts.performance_distribution.data|tojson }}, '#06aed4');
+line('c9', {{ charts.attendance_trend.labels|tojson }}, {{ charts.attendance_trend.data|tojson }}, '#12b76a');
+bar('c10', {{ charts.hiring_trend.labels|tojson }}, {{ charts.hiring_trend.data|tojson }}, '#2f6bff');
+</script>
+{% endblock %}

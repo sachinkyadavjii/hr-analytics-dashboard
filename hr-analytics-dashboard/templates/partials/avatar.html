@@ -1,0 +1,28 @@
+{# 
+  Reusable employee avatar macro.
+  Usage: {% import 'partials/avatar.html' as avatar %}
+         {{ avatar.render(employee, size=34) }}
+
+  Shows the uploaded profile picture if present; falls back to a
+  deterministic-colored initials circle otherwise. If the image file is
+  missing/broken, JS (onerror) swaps to the initials fallback automatically.
+#}
+{% macro render(employee, size=36, font_size=None) %}
+{% set fs = font_size or (size * 0.36)|round|int %}
+{% if employee.profile_picture %}
+<div class="avatar-wrap" style="width:{{ size }}px;height:{{ size }}px;">
+  <img src="{{ url_for('static', filename=employee.profile_picture) }}"
+       alt="{{ employee.full_name }}"
+       class="avatar-photo"
+       style="width:{{ size }}px;height:{{ size }}px;"
+       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+  <div class="avatar-circle avatar-fallback" style="display:none;width:{{ size }}px;height:{{ size }}px;font-size:{{ fs }}px;background:{{ employee.avatar_color }}1a;color:{{ employee.avatar_color }};">
+    {{ employee.initials }}
+  </div>
+</div>
+{% else %}
+<div class="avatar-circle" style="width:{{ size }}px;height:{{ size }}px;font-size:{{ fs }}px;background:{{ employee.avatar_color }}1a;color:{{ employee.avatar_color }};">
+  {{ employee.initials }}
+</div>
+{% endif %}
+{% endmacro %}

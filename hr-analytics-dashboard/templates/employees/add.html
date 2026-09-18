@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Add Employee · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{{ url_for('employees.list_employees') }}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">Add Employee</h4>
+</div>
+
+<form method="POST" class="card-flat">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="section-title mb-3">Personal Information</div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><label class="form-label">First Name *</label><input type="text" name="first_name" class="form-control" required value="{{ form.get('first_name','') }}"></div>
+    <div class="col-md-3"><label class="form-label">Last Name *</label><input type="text" name="last_name" class="form-control" required value="{{ form.get('last_name','') }}"></div>
+    <div class="col-md-3"><label class="form-label">Email *</label><input type="email" name="email" class="form-control" required value="{{ form.get('email','') }}"></div>
+    <div class="col-md-3"><label class="form-label">Phone</label><input type="text" name="phone" class="form-control" value="{{ form.get('phone','') }}"></div>
+    <div class="col-md-3"><label class="form-label">Date of Birth</label><input type="date" name="date_of_birth" class="form-control"></div>
+    <div class="col-md-3"><label class="form-label">Gender</label>
+      <select name="gender" class="form-select">
+        <option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="col-md-6"><label class="form-label">Address</label><input type="text" name="address" class="form-control"></div>
+    <div class="col-md-6"><label class="form-label">Emergency Contact</label><input type="text" name="emergency_contact" class="form-control" placeholder="Name - Phone"></div>
+  </div>
+
+  <div class="section-title mb-3">Work Information</div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><label class="form-label">Employee ID *</label><input type="text" name="employee_code" class="form-control" required placeholder="EMP1001" value="{{ form.get('employee_code','') }}"></div>
+    <div class="col-md-3"><label class="form-label">Department</label>
+      <select name="department_id" class="form-select">
+        <option value="">Unassigned</option>
+        {% for d in departments %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3"><label class="form-label">Job Title</label><input type="text" name="job_title" class="form-control"></div>
+    <div class="col-md-3"><label class="form-label">Manager</label><input type="text" name="manager_name" class="form-control"></div>
+    <div class="col-md-3"><label class="form-label">Joining Date</label><input type="date" name="joining_date" class="form-control"></div>
+    <div class="col-md-3"><label class="form-label">Employment Type</label>
+      <select name="employment_type" class="form-select">
+        <option>Full-Time</option><option>Part-Time</option><option>Contract</option><option>Intern</option>
+      </select>
+    </div>
+    <div class="col-md-3"><label class="form-label">Location</label><input type="text" name="location" class="form-control" placeholder="City"></div>
+    <div class="col-md-3"><label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        <option>Active</option><option>On Leave</option><option>Inactive</option><option>Resigned</option><option>Terminated</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section-title mb-3">Employment Information</div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-4"><label class="form-label">Salary (₹/month)</label><input type="number" step="0.01" name="salary" class="form-control"></div>
+    <div class="col-md-4"><label class="form-label">Work Experience (years)</label><input type="number" step="0.1" name="experience_years" class="form-control"></div>
+    <div class="col-md-4"><label class="form-label">Skills</label><input type="text" name="skills" class="form-control" placeholder="Comma separated"></div>
+  </div>
+
+  <div class="d-flex justify-content-end gap-2">
+    <a href="{{ url_for('employees.list_employees') }}" class="btn btn-light">Cancel</a>
+    <button type="submit" class="btn btn-primary px-4">Save Employee</button>
+  </div>
+</form>
+{% endblock %}

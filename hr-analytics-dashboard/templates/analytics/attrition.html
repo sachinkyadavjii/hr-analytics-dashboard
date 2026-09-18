@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Attrition Analysis · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="fw-bold mb-0">Attrition Analysis</h4>
+  <a href="{{ url_for('analytics.index') }}" class="btn btn-light btn-sm"><i class="bi bi-arrow-left"></i> Back to Analytics</a>
+</div>
+
+<div class="card-flat mb-4 text-center">
+  <div class="fw-bold display-6">{{ kpis.attrition_rate }}%</div>
+  <div class="text-muted">Overall Attrition Rate</div>
+  <div class="text-muted small mt-1">Calculated as (employees who left) / (total employees) × 100</div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">By Department</div><canvas id="c1" height="180"></canvas></div></div>
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">By Gender</div><canvas id="c2" height="180"></canvas></div></div>
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">By Age Group</div><canvas id="c3" height="180"></canvas></div></div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">By Experience</div><canvas id="c4" height="180"></canvas></div></div>
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">By Salary Range</div><canvas id="c5" height="180"></canvas></div></div>
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">By Employment Type</div><canvas id="c6" height="180"></canvas></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-6"><div class="card-flat h-100"><div class="section-title mb-3">Reasons for Leaving</div><canvas id="c7" height="180"></canvas></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const palette = ["#2f6bff", "#f97066", "#12b76a", "#f79009", "#9b8afb", "#06aed4", "#ee46bc", "#667085"];
+function bar(id, labels, values) {
+  new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ data: values, backgroundColor: '#f97066', borderRadius: 6 }] },
+    options: { plugins: { legend: { display: false } } }
+  });
+}
+bar('c1', {{ breakdown.by_department.labels|tojson }}, {{ breakdown.by_department.data|tojson }});
+bar('c2', {{ breakdown.by_gender.labels|tojson }}, {{ breakdown.by_gender.data|tojson }});
+bar('c3', {{ breakdown.by_age.labels|tojson }}, {{ breakdown.by_age.data|tojson }});
+bar('c4', {{ breakdown.by_experience.labels|tojson }}, {{ breakdown.by_experience.data|tojson }});
+bar('c5', {{ breakdown.by_salary.labels|tojson }}, {{ breakdown.by_salary.data|tojson }});
+bar('c6', {{ breakdown.by_employment_type.labels|tojson }}, {{ breakdown.by_employment_type.data|tojson }});
+new Chart(document.getElementById('c7'), {
+  type: 'doughnut',
+  data: { labels: {{ reasons.labels|tojson }}, datasets: [{ data: {{ reasons.data|tojson }}, backgroundColor: palette }] },
+  options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+});
+</script>
+{% endblock %}

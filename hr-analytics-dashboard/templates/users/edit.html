@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Edit User · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{{ url_for('users.list_users') }}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">Edit User — {{ target.name }}</h4>
+</div>
+
+<form method="POST" class="card-flat" style="max-width:560px;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="mb-3">
+    <label class="form-label">Full Name</label>
+    <input type="text" name="name" class="form-control" value="{{ target.name }}" required>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Email</label>
+    <input type="email" class="form-control" value="{{ target.email }}" disabled>
+    <div class="form-text">Email cannot be changed here.</div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Role</label>
+      <select name="role" class="form-select" {{ 'disabled' if target.role not in allowed_roles and target.id != session.get('user_id') }}>
+        <option value="{{ target.role }}" selected>{{ target.role }} (current)</option>
+        {% for r in allowed_roles %}
+          {% if r != target.role %}<option value="{{ r }}">{{ r }}</option>{% endif %}
+        {% endfor %}
+      </select>
+      {% if target.role not in allowed_roles %}
+      <div class="form-text text-warning">You cannot change this account's role beyond your permission level.</div>
+      {% endif %}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        {% for s in ['Active', 'Inactive', 'Suspended'] %}
+        <option value="{{ s }}" {{ 'selected' if target.status == s }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  {% if target.employee %}
+  <div class="mb-3 p-3 rounded" style="background:var(--bg);">
+    <div class="text-muted small">Linked Employee</div>
+    <div class="fw-semibold">{{ target.employee.full_name }} ({{ target.employee.employee_code }})</div>
+  </div>
+  {% endif %}
+
+  <div class="d-flex justify-content-end gap-2">
+    <a href="{{ url_for('users.list_users') }}" class="btn btn-light">Cancel</a>
+    <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+  </div>
+</form>
+{% endblock %}

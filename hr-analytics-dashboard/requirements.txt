@@ -1,0 +1,14 @@
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+Flask-WTF==1.2.1
+Werkzeug==3.0.3
+python-dotenv==1.0.1
+pandas>=2.2.3
+numpy>=2.0
+openpyxl>=3.1.5
+scikit-learn>=1.5
+gunicorn==22.0.0
+psycopg2-binary>=2.9.10
+Faker==25.8.0
+scikit-learn>=1.4
+anthropic>=0.34.0

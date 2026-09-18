@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Upload Dataset · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{{ url_for('data_upload.index') }}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">Upload Dataset</h4>
+</div>
+
+<div class="card-flat mx-auto" style="max-width:640px;">
+  <form method="POST" enctype="multipart/form-data" id="uploadForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div id="dropZone" class="text-center py-5 px-3" style="border:2px dashed var(--border); border-radius:12px; cursor:pointer; transition:0.2s;">
+      <i class="bi bi-cloud-arrow-up display-4 text-primary mb-2 d-block"></i>
+      <div class="fw-semibold mb-1">Drag & drop your file here</div>
+      <div class="text-muted small mb-3">or click to browse</div>
+      <input type="file" name="dataset_file" id="fileInput" accept=".csv,.xlsx,.xls" class="d-none">
+      <button type="button" class="btn btn-outline-primary btn-sm" id="browseBtn">Browse File</button>
+      <div class="text-muted small mt-3">Supported formats: CSV, XLSX, XLS &middot; Max size: 15 MB</div>
+    </div>
+
+    <div id="fileInfo" class="d-none mt-3 p-3 rounded" style="background:var(--bg);">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <i class="bi bi-file-earmark-spreadsheet text-primary"></i>
+          <span id="fileName" class="fw-semibold"></span>
+          <span id="fileSize" class="text-muted small ms-2"></span>
+        </div>
+        <button type="button" class="btn btn-sm btn-light" id="clearFile"><i class="bi bi-x-lg"></i></button>
+      </div>
+    </div>
+
+    <div id="errorState" class="alert alert-danger mt-3 d-none"></div>
+
+    <div id="loadingState" class="text-center mt-3 d-none">
+      <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+      <span class="ms-2 text-muted">Uploading and analyzing file...</span>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100 mt-3" id="submitBtn" disabled>
+      <i class="bi bi-cloud-upload"></i> Upload & Analyze
+    </button>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const browseBtn = document.getElementById('browseBtn');
+const fileInfo = document.getElementById('fileInfo');
+const fileName = document.getElementById('fileName');
+const fileSize = document.getElementById('fileSize');
+const clearFile = document.getElementById('clearFile');
+const submitBtn = document.getElementById('submitBtn');
+const errorState = document.getElementById('errorState');
+const uploadForm = document.getElementById('uploadForm');
+const loadingState = document.getElementById('loadingState');
+
+const ALLOWED = ['csv', 'xlsx', 'xls'];
+const MAX_SIZE = 15 * 1024 * 1024;
+
+function humanSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function handleFile(file) {
+  errorState.classList.add('d-none');
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!ALLOWED.includes(ext)) {
+    errorState.textContent = 'Unsupported file type. Please upload a CSV or Excel (.xlsx/.xls) file.';
+    errorState.classList.remove('d-none');
+    fileInfo.classList.add('d-none');
+    submitBtn.disabled = true;
+    return;
+  }
+  if (file.size > MAX_SIZE) {
+    errorState.textContent = 'File is too large. Maximum allowed size is 15 MB.';
+    errorState.classList.remove('d-none');
+    fileInfo.classList.add('d-none');
+    submitBtn.disabled = true;
+    return;
+  }
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  fileInput.files = dt.files;
+  fileName.textContent = file.name;
+  fileSize.textContent = humanSize(file.size);
+  fileInfo.classList.remove('d-none');
+  submitBtn.disabled = false;
+}
+
+browseBtn.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('click', (e) => { if (e.target === dropZone || dropZone.contains(e.target)) fileInput.click(); });
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+['dragenter', 'dragover'].forEach(evt => dropZone.addEventListener(evt, (e) => {
+  e.preventDefault(); e.stopPropagation();
+  dropZone.style.borderColor = '#2f6bff';
+  dropZone.style.background = '#eef3ff';
+}));
+['dragleave', 'drop'].forEach(evt => dropZone.addEventListener(evt, (e) => {
+  e.preventDefault(); e.stopPropagation();
+  dropZone.style.borderColor = 'var(--border)';
+  dropZone.style.background = 'transparent';
+}));
+dropZone.addEventListener('drop', (e) => {
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+clearFile.addEventListener('click', () => {
+  fileInput.value = '';
+  fileInfo.classList.add('d-none');
+  submitBtn.disabled = true;
+});
+
+uploadForm.addEventListener('submit', () => {
+  loadingState.classList.remove('d-none');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = 'Uploading...';
+});
+</script>
+{% endblock %}

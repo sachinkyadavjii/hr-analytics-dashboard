@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% import "partials/avatar.html" as avatar %}
+{% block title %}Attendance · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h4 class="fw-bold mb-0">Attendance</h4>
+  <form method="get" class="d-flex gap-2">
+    <input type="date" name="date" class="form-control" value="{{ selected_date }}" onchange="this.form.submit()">
+  </form>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-2"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ stats.rate }}%</div><div class="text-muted small">Attendance Rate</div></div></div>
+  <div class="col-6 col-md-2"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ stats.present }}</div><div class="text-muted small">Present</div></div></div>
+  <div class="col-6 col-md-2"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ stats.absent }}</div><div class="text-muted small">Absent</div></div></div>
+  <div class="col-6 col-md-2"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ stats.late }}</div><div class="text-muted small">Late</div></div></div>
+  <div class="col-6 col-md-2"><div class="card-flat text-center"><div class="fw-bold fs-4">{{ stats.on_leave }}</div><div class="text-muted small">Leave</div></div></div>
+</div>
+
+{% if session_role in ['ADMIN', 'HR', 'MANAGER'] and unmarked %}
+<div class="card-flat mb-4">
+  <div class="section-title mb-3">Mark Attendance — {{ selected_date }}</div>
+  <form method="POST" action="{{ url_for('attendance.mark_attendance') }}" class="row g-2 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="date" value="{{ selected_date }}">
+    <div class="col-md-4">
+      <label class="form-label">Employee</label>
+      <select name="employee_id" class="form-select" required>
+        {% for e in unmarked %}<option value="{{ e.id }}">{{ e.full_name }} ({{ e.employee_code }})</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        <option>Present</option><option>Absent</option><option>Late</option><option>Half Day</option><option>Leave</option>
+      </select>
+    </div>
+    <div class="col-md-2"><label class="form-label">Check In</label><input type="time" name="check_in" class="form-control"></div>
+    <div class="col-md-2"><label class="form-label">Check Out</label><input type="time" name="check_out" class="form-control"></div>
+    <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Mark</button></div>
+  </form>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card-flat h-100"><div class="section-title mb-3">Monthly Attendance</div><canvas id="monthlyChart" height="180"></canvas></div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card-flat h-100"><div class="section-title mb-3">Department Attendance</div><canvas id="deptChart" height="180"></canvas></div>
+  </div>
+</div>
+
+<div class="card-flat">
+  <div class="table-responsive"><table class="table">
+    <thead><tr><th>Employee</th><th>Status</th><th>Check In</th><th>Check Out</th></tr></thead>
+    <tbody>
+    {% for r in records %}
+      <tr>
+        <td><div class="d-flex align-items-center gap-2">{{ avatar.render(r.employee, size=26) }} {{ r.employee.full_name }}</div></td>
+        <td><span class="badge-status badge-{{ r.status|lower|replace(' ', '') }}">{{ r.status }}</span></td>
+        <td>{{ r.check_in or '-' }}</td>
+        <td>{{ r.check_out or '-' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="text-center text-muted py-3">No attendance marked for this date yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const palette = ["#2f6bff", "#f97066", "#12b76a", "#f79009", "#9b8afb", "#06aed4"];
+new Chart(document.getElementById('monthlyChart'), {
+  type: 'line',
+  data: { labels: {{ charts.monthly.labels|tojson }}, datasets: [{ label: 'Attendance %', data: {{ charts.monthly.data|tojson }}, borderColor: '#2f6bff', backgroundColor: 'rgba(47,107,255,0.08)', fill: true, tension: 0.35 }] },
+  options: { plugins: { legend: { display: false } } }
+});
+new Chart(document.getElementById('deptChart'), {
+  type: 'bar',
+  data: { labels: {{ charts.department.labels|tojson }}, datasets: [{ label: 'Attendance %', data: {{ charts.department.data|tojson }}, backgroundColor: palette, borderRadius: 6 }] },
+  options: { plugins: { legend: { display: false } } }
+});
+</script>
+{% endblock %}

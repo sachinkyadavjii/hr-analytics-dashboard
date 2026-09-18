@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Create User · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{{ url_for('users.list_users') }}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">Create User Account</h4>
+</div>
+
+<div class="alert alert-info small">
+  <i class="bi bi-info-circle"></i>
+  You can create accounts with these roles only: <strong>{{ allowed_roles|join(', ') }}</strong>.
+  This is enforced on the server, not just hidden in this form.
+</div>
+
+<form method="POST" class="card-flat" style="max-width:640px;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="mb-3">
+    <label class="form-label">Link to Existing Employee (optional)</label>
+    <select name="employee_id" class="form-select" id="employeeSelect">
+      <option value="">— No linked employee (utility/admin account) —</option>
+      {% for e in unlinked_employees %}
+      <option value="{{ e.id }}" data-name="{{ e.full_name }}" data-email="{{ e.email }}">
+        {{ e.employee_code }} — {{ e.full_name }} ({{ e.department.name if e.department else 'Unassigned' }})
+      </option>
+      {% endfor %}
+    </select>
+    <div class="form-text">Only employees without an existing login are shown, so we never create duplicate records.</div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Full Name *</label>
+      <input type="text" name="name" id="nameInput" class="form-control" required value="{{ form.get('name','') }}">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Email *</label>
+      <input type="email" name="email" id="emailInput" class="form-control" required value="{{ form.get('email','') }}">
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Role *</label>
+      <select name="role" class="form-select" required>
+        <option value="">Select role</option>
+        {% for r in allowed_roles %}
+        <option value="{{ r }}" {{ 'selected' if form.get('role') == r }}>{{ r }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        {% for s in ['Active', 'Inactive', 'Suspended'] %}
+        <option value="{{ s }}" {{ 'selected' if form.get('status', 'Active') == s }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Temporary Password *</label>
+      <input type="password" name="password" class="form-control" minlength="8" required>
+      <div class="form-text">At least 8 characters. The employee will be required to change this on first login.</div>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Confirm Password *</label>
+      <input type="password" name="confirm_password" class="form-control" minlength="8" required>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end gap-2">
+    <a href="{{ url_for('users.list_users') }}" class="btn btn-light">Cancel</a>
+    <button type="submit" class="btn btn-primary px-4">Create Account</button>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('employeeSelect').addEventListener('change', function () {
+  const opt = this.options[this.selectedIndex];
+  if (opt.dataset.name) {
+    document.getElementById('nameInput').value = opt.dataset.name;
+    document.getElementById('emailInput').value = opt.dataset.email || '';
+  }
+});
+</script>
+{% endblock %}

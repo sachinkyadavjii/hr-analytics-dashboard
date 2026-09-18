@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% import "partials/avatar.html" as avatar %}
+{% block title %}Dashboard · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Good day, {{ session_name.split(' ')[0] if session_name else 'there' }} 👋</h4>
+    <div class="section-subtitle">Here's what's happening in your company today.</div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  {% set kpi_items = [
+    ('Total Employees', kpis.total_employees, 'bi-people', ''),
+    ('Active Employees', kpis.active_employees, 'bi-person-check', ''),
+    ('On Leave', kpis.on_leave, 'bi-airplane', ''),
+    ('New Hires (30d)', kpis.new_hires, 'bi-person-plus', ''),
+    ('Attrition Rate', kpis.attrition_rate, 'bi-graph-down-arrow', '%'),
+    ('Average Salary', kpis.average_salary, 'bi-cash-coin', 'money'),
+    ('Attendance Rate', kpis.attendance_rate, 'bi-calendar-check', '%'),
+    ('Avg Performance', kpis.average_performance, 'bi-star', '/5'),
+  ] %}
+  {% for label, value, icon, suffix in kpi_items %}
+  <div class="col-6 col-md-3">
+    <div class="card-flat kpi-card h-100">
+      <div class="kpi-icon"><i class="bi {{ icon }}"></i></div>
+      <div class="kpi-value">
+        {% if suffix == 'money' %}{{ value|money }}{% else %}{{ value }}{{ suffix }}{% endif %}
+      </div>
+      <div class="kpi-label">{{ label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="card-flat h-100">
+      <div class="section-title mb-3">Employee Growth</div>
+      <canvas id="growthChart" height="180"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card-flat h-100">
+      <div class="section-title mb-3">Department Distribution</div>
+      <canvas id="deptChart" height="180"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-3">
+    <div class="card-flat h-100">
+      <div class="section-title mb-3">Gender Distribution</div>
+      <canvas id="genderChart" height="180"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="card-flat h-100">
+      <div class="section-title mb-3">Employee Status</div>
+      <canvas id="statusChart" height="180"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card-flat h-100">
+      <div class="section-title mb-3">Monthly Hiring Trend</div>
+      <canvas id="hiringChart" height="180"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card-flat h-100">
+      <div class="section-title mb-3">Attrition Trend</div>
+      <canvas id="attritionChart" height="180"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card-flat">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-title mb-0">Recent Employees</div>
+        <a href="{{ url_for('employees.list_employees') }}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Name</th><th>Department</th><th>Designation</th><th>Joining Date</th><th>Status</th></tr></thead>
+          <tbody>
+          {% for e in recent_employees %}
+            <tr>
+              <td><a href="{{ url_for('employees.view_employee', employee_id=e.id) }}" class="text-decoration-none text-dark fw-semibold d-flex align-items-center gap-2">
+                {{ avatar.render(e, size=28) }} {{ e.full_name }}
+              </a></td>
+              <td>{{ e.department.name if e.department else '-' }}</td>
+              <td>{{ e.job_title or '-' }}</td>
+              <td>{{ e.joining_date|dateformat }}</td>
+              <td><span class="badge-status badge-{{ e.status|lower|replace(' ', '') }}">{{ e.status }}</span></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-center text-muted py-3">No employees yet.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card-flat">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-title mb-0">Upcoming Leave Requests</div>
+        <a href="{{ url_for('leave.list_leave') }}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Employee</th><th>Type</th><th>From</th><th>Status</th></tr></thead>
+          <tbody>
+          {% for l in upcoming_leave %}
+            <tr>
+              <td>{{ l.employee.full_name }}</td>
+              <td>{{ l.leave_type }}</td>
+              <td>{{ l.start_date|dateformat }}</td>
+              <td><span class="badge-status badge-{{ l.status|lower }}">{{ l.status }}</span></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-3">No pending leave requests.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const palette = ["#2f6bff", "#f97066", "#12b76a", "#f79009", "#9b8afb", "#06aed4", "#ee46bc", "#667085"];
+
+new Chart(document.getElementById('growthChart'), {
+  type: 'line',
+  data: { labels: {{ charts.growth.labels|tojson }}, datasets: [{ label: 'Headcount', data: {{ charts.growth.data|tojson }}, borderColor: '#2f6bff', backgroundColor: 'rgba(47,107,255,0.08)', fill: true, tension: 0.35 }] },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: false } } }
+});
+
+new Chart(document.getElementById('deptChart'), {
+  type: 'doughnut',
+  data: { labels: {{ charts.departments.labels|tojson }}, datasets: [{ data: {{ charts.departments.data|tojson }}, backgroundColor: palette }] },
+  options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+});
+
+new Chart(document.getElementById('genderChart'), {
+  type: 'doughnut',
+  data: { labels: {{ charts.gender.labels|tojson }}, datasets: [{ data: {{ charts.gender.data|tojson }}, backgroundColor: palette }] },
+  options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+});
+
+new Chart(document.getElementById('statusChart'), {
+  type: 'bar',
+  data: { labels: {{ charts.status.labels|tojson }}, datasets: [{ label: 'Employees', data: {{ charts.status.data|tojson }}, backgroundColor: '#2f6bff', borderRadius: 6 }] },
+  options: { plugins: { legend: { display: false } } }
+});
+
+new Chart(document.getElementById('hiringChart'), {
+  type: 'bar',
+  data: { labels: {{ charts.hiring.labels|tojson }}, datasets: [{ label: 'New Hires', data: {{ charts.hiring.data|tojson }}, backgroundColor: '#12b76a', borderRadius: 6 }] },
+  options: { plugins: { legend: { display: false } } }
+});
+
+new Chart(document.getElementById('attritionChart'), {
+  type: 'line',
+  data: { labels: {{ charts.attrition.labels|tojson }}, datasets: [{ label: 'Exits', data: {{ charts.attrition.data|tojson }}, borderColor: '#f97066', backgroundColor: 'rgba(249,112,102,0.1)', fill: true, tension: 0.35 }] },
+  options: { plugins: { legend: { display: false } } }
+});
+</script>
+{% endblock %}

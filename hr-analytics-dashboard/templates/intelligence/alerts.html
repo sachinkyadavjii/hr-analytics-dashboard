@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Smart HR Alerts · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">Smart HR Alerts</h4>
+    <div class="section-subtitle">Conditions detected automatically from your live HR data.</div>
+  </div>
+  <button class="btn btn-light btn-sm" data-bs-toggle="collapse" data-bs-target="#thresholdPanel">
+    <i class="bi bi-sliders"></i> Configure Thresholds
+  </button>
+</div>
+
+<div class="collapse mb-4" id="thresholdPanel">
+  <div class="card-flat">
+    <div class="section-title mb-3">Alert Thresholds</div>
+    <form method="get" class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label">High attrition (%)</label>
+        <input type="number" step="0.1" name="high_attrition_pct" class="form-control" value="{{ thresholds.high_attrition_pct }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Low attendance (%)</label>
+        <input type="number" step="0.1" name="low_attendance_pct" class="form-control" value="{{ thresholds.low_attendance_pct }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Low performance (rating)</label>
+        <input type="number" step="0.1" name="low_performance_rating" class="form-control" value="{{ thresholds.low_performance_rating }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">High leave (days/year)</label>
+        <input type="number" name="high_leave_days" class="form-control" value="{{ thresholds.high_leave_days }}">
+      </div>
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary btn-sm">Apply Thresholds</button>
+        <a href="{{ url_for('intelligence.alerts') }}" class="btn btn-light btn-sm">Reset to Defaults</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card-flat text-center">
+      <div class="fw-bold fs-3 text-danger">{{ warnings|length }}</div>
+      <div class="text-muted small">Warnings</div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card-flat text-center">
+      <div class="fw-bold fs-3 text-primary">{{ infos|length }}</div>
+      <div class="text-muted small">Informational</div>
+    </div>
+  </div>
+</div>
+
+<div class="card-flat">
+  {% for alert in alerts %}
+  <div class="d-flex align-items-start gap-3 py-3 {{ 'border-bottom' if not loop.last }}">
+    <div class="kpi-icon" style="background:{{ '#fde8e8' if alert.level == 'warning' else '#eef3ff' }};color:{{ '#b42318' if alert.level == 'warning' else '#2f6bff' }};">
+      <i class="bi {{ 'bi-exclamation-triangle-fill' if alert.level == 'warning' else 'bi-info-circle-fill' }}"></i>
+    </div>
+    <div class="flex-grow-1">
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge-status {{ 'badge-resigned' if alert.level == 'warning' else 'badge-inactive' }}">{{ alert.category }}</span>
+        {% if alert.level == 'warning' %}<span class="fw-semibold text-danger small">WARNING</span>{% endif %}
+      </div>
+      <div class="fw-semibold">{{ alert.message }}</div>
+      <div class="text-muted small">{{ alert.detail }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="text-muted small mt-3">
+  <i class="bi bi-info-circle"></i>
+  Alerts are generated only where the supporting data exists. Departments with fewer than 5 employees
+  are excluded from attrition alerts, and attendance alerts require at least 10 recorded days.
+</div>
+{% endblock %}

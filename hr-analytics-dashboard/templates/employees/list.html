@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% import "partials/avatar.html" as avatar %}
+{% block title %}Employees · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h4 class="fw-bold mb-0">Employees</h4>
+  {% if session_role in ['ADMIN', 'HR'] %}
+  <a href="{{ url_for('employees.add_employee') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Employee</a>
+  {% endif %}
+</div>
+
+<div class="card-flat mb-3">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label">Search</label>
+      <input type="text" name="q" class="form-control" placeholder="Name, ID, email, designation..." value="{{ filters.q }}">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Department</label>
+      <select name="department" class="form-select">
+        <option value="">All</option>
+        {% for d in departments %}
+        <option value="{{ d.name }}" {{ 'selected' if filters.department == d.name }}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        <option value="">All</option>
+        {% for s in ['Active', 'On Leave', 'Inactive', 'Resigned', 'Terminated'] %}
+        <option value="{{ s }}" {{ 'selected' if filters.status == s }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Employment Type</label>
+      <select name="employment_type" class="form-select">
+        <option value="">All</option>
+        {% for t in ['Full-Time', 'Part-Time', 'Contract', 'Intern'] %}
+        <option value="{{ t }}" {{ 'selected' if filters.employment_type == t }}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-primary w-100" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+    </div>
+  </form>
+</div>
+
+<div class="card-flat">
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>Employee ID</th><th>Name</th><th>Department</th><th>Designation</th>
+          <th>Email</th><th>Joining Date</th><th>Type</th><th>Status</th><th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in employees %}
+        <tr>
+          <td class="text-muted">{{ e.employee_code }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              {{ avatar.render(e, size=34) }}
+              <span class="fw-semibold">{{ e.full_name }}</span>
+            </div>
+          </td>
+          <td>{{ e.department.name if e.department else '-' }}</td>
+          <td>{{ e.job_title or '-' }}</td>
+          <td>{{ e.email }}</td>
+          <td>{{ e.joining_date|dateformat }}</td>
+          <td>{{ e.employment_type }}</td>
+          <td><span class="badge-status badge-{{ e.status|lower|replace(' ', '') }}">{{ e.status }}</span></td>
+          <td class="text-end">
+            <a href="{{ url_for('employees.view_employee', employee_id=e.id) }}" class="btn btn-sm btn-light" title="View"><i class="bi bi-eye"></i></a>
+            {% if session_role in ['ADMIN', 'HR'] %}
+            <a href="{{ url_for('employees.edit_employee', employee_id=e.id) }}" class="btn btn-sm btn-light" title="Edit"><i class="bi bi-pencil"></i></a>
+            <button class="btn btn-sm btn-light text-danger" title="Deactivate" data-bs-toggle="modal" data-bs-target="#deactivateModal{{ e.id }}"><i class="bi bi-slash-circle"></i></button>
+            <div class="modal fade" id="deactivateModal{{ e.id }}" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <form method="POST" action="{{ url_for('employees.deactivate_employee', employee_id=e.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="modal-header"><h6 class="modal-title">Deactivate {{ e.full_name }}?</h6></div>
+                    <div class="modal-body">
+                      <p class="text-muted small">The employee will be marked Inactive. Historical records are preserved for analytics.</p>
+                      <label class="form-label">Reason (optional)</label>
+                      <input type="text" name="exit_reason" class="form-control">
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                      <button type="submit" class="btn btn-danger">Deactivate</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="text-center text-muted py-4">No employees found for the current filters.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pagination.pages > 1 %}
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-end mb-0">
+      <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+        <a class="page-link" href="{{ url_for('employees.list_employees', page=pagination.prev_num, **filters) }}">Prev</a>
+      </li>
+      {% for p in pagination.iter_pages() %}
+        {% if p %}
+        <li class="page-item {{ 'active' if p == pagination.page }}">
+          <a class="page-link" href="{{ url_for('employees.list_employees', page=p, **filters) }}">{{ p }}</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+      <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+        <a class="page-link" href="{{ url_for('employees.list_employees', page=pagination.next_num, **filters) }}">Next</a>
+      </li>
+    </ul>
+  </nav>
+  {% endif %}
+  <div class="text-muted small mt-2">Showing {{ employees|length }} of {{ pagination.total }} employees</div>
+</div>
+{% endblock %}

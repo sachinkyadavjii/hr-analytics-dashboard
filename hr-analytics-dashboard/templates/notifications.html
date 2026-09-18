@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Notifications · HR Analytics{% endblock %}
+{% block content %}
+
+<h4 class="fw-bold mb-3">Notifications</h4>
+
+<div class="card-flat">
+  <ul class="list-unstyled mb-0">
+    {% for n in notifications %}
+    <li class="d-flex justify-content-between align-items-center border-bottom py-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="kpi-icon">
+          {% if n.category == 'leave' %}<i class="bi bi-airplane"></i>
+          {% elif n.category == 'employee' %}<i class="bi bi-person-plus"></i>
+          {% elif n.category == 'performance' %}<i class="bi bi-graph-up-arrow"></i>
+          {% else %}<i class="bi bi-bell"></i>{% endif %}
+        </div>
+        <div>{{ n.message }}</div>
+      </div>
+      <div class="text-muted small">{{ n.created_at.strftime('%d %b, %I:%M %p') }}</div>
+    </li>
+    {% else %}
+    <li class="text-center text-muted py-4">No notifications yet.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

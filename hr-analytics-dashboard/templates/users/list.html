@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}User Management · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">User Management</h4>
+    <div class="section-subtitle">Accounts are only created by authorized HR/Admin users — there is no public sign-up.</div>
+  </div>
+  <a href="{{ url_for('users.create_user') }}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Create User</a>
+</div>
+
+<div class="card-flat mb-3">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label">Search</label>
+      <input type="text" name="q" class="form-control" placeholder="Name or email..." value="{{ filters.q }}">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Role</label>
+      <select name="role" class="form-select">
+        <option value="">All</option>
+        {% for r in ['ADMIN', 'HR', 'MANAGER', 'EMPLOYEE'] %}
+        <option value="{{ r }}" {{ 'selected' if filters.role == r }}>{{ r }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        <option value="">All</option>
+        {% for s in ['Active', 'Inactive', 'Suspended'] %}
+        <option value="{{ s }}" {{ 'selected' if filters.status == s }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label">Department</label>
+      <select name="department" class="form-select">
+        <option value="">All</option>
+        {% for d in departments %}
+        <option value="{{ d.id }}" {{ 'selected' if filters.department == d.id|string }}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-primary w-100" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+    </div>
+  </form>
+</div>
+
+<div class="card-flat">
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>Name</th><th>Email</th><th>Employee ID</th><th>Role</th><th>Department</th>
+          <th>Status</th><th>Created</th><th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for u in users %}
+        <tr>
+          <td class="fw-semibold">{{ u.name }}</td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.employee.employee_code if u.employee else '-' }}</td>
+          <td><span class="badge bg-light text-dark border">{{ u.role }}</span></td>
+          <td>{{ u.employee.department.name if u.employee and u.employee.department else '-' }}</td>
+          <td>
+            <span class="badge-status badge-{{ 'active' if u.status == 'Active' else ('inactive' if u.status == 'Inactive' else 'resigned') }}">{{ u.status }}</span>
+            {% if u.must_change_password %}<span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">pending first login</span>{% endif %}
+          </td>
+          <td>{{ u.created_at|dateformat }}</td>
+          <td class="text-end">
+            <a href="{{ url_for('users.view_user', user_id=u.id) }}" class="btn btn-sm btn-light" title="View"><i class="bi bi-eye"></i></a>
+            <a href="{{ url_for('users.edit_user', user_id=u.id) }}" class="btn btn-sm btn-light" title="Edit"><i class="bi bi-pencil"></i></a>
+            {% if u.status == 'Active' %}
+            <form method="POST" action="{{ url_for('users.deactivate_user', user_id=u.id) }}" class="d-inline" onsubmit="return confirm('Deactivate {{ u.name }}\'s account? They will no longer be able to log in.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-light text-danger" title="Deactivate"><i class="bi bi-slash-circle"></i></button>
+            </form>
+            {% else %}
+            <form method="POST" action="{{ url_for('users.reactivate_user', user_id=u.id) }}" class="d-inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-light text-success" title="Reactivate"><i class="bi bi-arrow-counterclockwise"></i></button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="text-center text-muted py-4">No user accounts found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if session_role == 'ADMIN' %}
+<div class="mt-3">
+  <a href="{{ url_for('users.audit_log') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-journal-text"></i> View Audit Log</a>
+</div>
+{% endif %}
+{% endblock %}

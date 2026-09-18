@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ target.name }} · User Management{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{{ url_for('users.list_users') }}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">{{ target.name }}</h4>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card-flat">
+      <div class="section-title mb-3">Account Details</div>
+      <div class="row g-3">
+        <div class="col-md-6"><div class="text-muted small">Email</div><div class="fw-semibold">{{ target.email }}</div></div>
+        <div class="col-md-6"><div class="text-muted small">Role</div><div class="fw-semibold">{{ target.role }}</div></div>
+        <div class="col-md-6"><div class="text-muted small">Status</div>
+          <div><span class="badge-status badge-{{ 'active' if target.status == 'Active' else ('inactive' if target.status == 'Inactive' else 'resigned') }}">{{ target.status }}</span></div>
+        </div>
+        <div class="col-md-6"><div class="text-muted small">Created</div><div class="fw-semibold">{{ target.created_at|dateformat }}</div></div>
+        <div class="col-md-6"><div class="text-muted small">Created By</div><div class="fw-semibold">{{ target.created_by.name if target.created_by else '-' }}</div></div>
+        <div class="col-md-6"><div class="text-muted small">Last Login</div><div class="fw-semibold">{{ target.last_login|dateformat('%d %b %Y, %I:%M %p') if target.last_login else 'Never' }}</div></div>
+        <div class="col-md-6"><div class="text-muted small">Password Status</div>
+          <div class="fw-semibold">{% if target.must_change_password %}<span class="text-warning">Temporary — pending first login</span>{% else %}Set by user{% endif %}</div>
+        </div>
+      </div>
+
+      {% if target.employee %}
+      <hr>
+      <div class="text-muted small mb-1">Linked Employee</div>
+      <div class="d-flex align-items-center gap-2">
+        <a href="{{ url_for('employees.view_employee', employee_id=target.employee.id) }}" class="fw-semibold text-decoration-none">
+          {{ target.employee.full_name }} ({{ target.employee.employee_code }})
+        </a>
+      </div>
+      <div class="text-muted small">{{ target.employee.department.name if target.employee.department else 'Unassigned' }} · {{ target.employee.job_title or '-' }}</div>
+      {% else %}
+      <hr>
+      <div class="text-muted small">No linked employee record (utility/admin account).</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card-flat">
+      <div class="section-title mb-3">Actions</div>
+      <div class="d-flex flex-column gap-2">
+        <a href="{{ url_for('users.edit_user', user_id=target.id) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i> Edit Account</a>
+
+        <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#resetPwModal">
+          <i class="bi bi-key"></i> Reset Password
+        </button>
+
+        {% if target.status == 'Active' and target.id != session.get('user_id') %}
+        <form method="POST" action="{{ url_for('users.deactivate_user', user_id=target.id) }}"
+              onsubmit="return confirm('Deactivate this account? They will no longer be able to log in.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-slash-circle"></i> Deactivate Account</button>
+        </form>
+        {% elif target.status != 'Active' %}
+        <form method="POST" action="{{ url_for('users.reactivate_user', user_id=target.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-outline-success btn-sm w-100"><i class="bi bi-arrow-counterclockwise"></i> Reactivate Account</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="resetPwModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <form method="POST" action="{{ url_for('users.reset_password', user_id=target.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-header"><h6 class="modal-title">Reset Password — {{ target.name }}</h6></div>
+      <div class="modal-body">
+        <p class="text-muted small">Set a new temporary password. The account holder will be required to change it on their next login. Share it with them through a secure channel — it will not be shown again.</p>
+        <label class="form-label">New Temporary Password</label>
+        <input type="password" name="new_password" class="form-control" minlength="8" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-warning">Reset Password</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+{% endblock %}

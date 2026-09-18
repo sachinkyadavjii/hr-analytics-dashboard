@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Map Columns · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{{ url_for('data_upload.index') }}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">Map Columns — {{ dataset.original_filename }}</h4>
+</div>
+
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle"></i>
+  We couldn't confidently auto-detect every column. Please confirm the mapping below before we run analytics —
+  this avoids silently guessing wrong. Fields left as "— None —" will simply be skipped in analytics.
+</div>
+
+<div class="card-flat">
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row g-3">
+      {% for field in canonical_fields %}
+      <div class="col-md-6">
+        <label class="form-label">
+          {{ field.replace('_', ' ')|title }}
+          {% if field == 'employee_id' %}<span class="text-danger">*</span>{% endif %}
+          {% if field in uncertain %}<span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">needs confirmation</span>{% endif %}
+        </label>
+        <select name="map_{{ field }}" class="form-select">
+          <option value="">— None —</option>
+          {% for col in columns %}
+          <option value="{{ col }}" {{ 'selected' if mapping.get(field) == col }}>{{ col }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="text-muted small mt-3"><span class="text-danger">*</span> Employee ID is required for row-level analytics (duplicate detection, attrition, etc.)</div>
+    <div class="d-flex justify-content-end gap-2 mt-4">
+      <a href="{{ url_for('data_upload.index') }}" class="btn btn-light">Cancel</a>
+      <button type="submit" class="btn btn-primary px-4">Confirm Mapping</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

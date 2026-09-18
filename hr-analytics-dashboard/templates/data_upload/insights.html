@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Dataset Insights · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <a href="{{ url_for('data_upload.index') }}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i></a>
+      <h4 class="fw-bold mb-0">{{ dataset.original_filename }}</h4>
+    </div>
+    <span class="badge bg-dark-subtle text-dark border">DATA SOURCE: Uploaded Dataset</span>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('data_upload.quality', dataset_id=dataset.id) }}" class="btn btn-sm btn-light">Data Quality</a>
+    <a href="{{ url_for('data_upload.compare', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-primary">Compare with Main HR</a>
+    <a href="{{ url_for('data_upload.export', dataset_id=dataset.id, kind='cleaned', fmt='csv') }}" class="btn btn-sm btn-outline-primary">Export Cleaned Data</a>
+    <a href="{{ url_for('data_upload.export', dataset_id=dataset.id, kind='kpis', fmt='excel') }}" class="btn btn-sm btn-outline-primary">Export KPIs (Excel)</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  {% set kpi_items = [
+    ('Total Employees', kpis.total_employees, ''),
+    ('Active Employees', kpis.active_employees, ''),
+    ('Leavers', kpis.leavers, ''),
+    ('Attrition Rate', kpis.attrition_rate, '%'),
+    ('New Hires (30d)', kpis.new_hires, ''),
+    ('Average Salary', kpis.average_salary, 'money'),
+    ('Attendance Rate', kpis.attendance_rate, '%'),
+    ('Avg Performance', kpis.average_performance, '/5'),
+  ] %}
+  {% for label, value, suffix in kpi_items %}
+  <div class="col-6 col-md-3">
+    <div class="card-flat kpi-card h-100">
+      <div class="kpi-label">{{ label }}</div>
+      {% if value == na_label %}
+      <div class="text-muted small fst-italic mt-1"><i class="bi bi-dash-circle"></i> Not available</div>
+      {% else %}
+      <div class="kpi-value">{% if suffix == 'money' %}₹{{ "{:,.0f}".format(value) }}{% else %}{{ value }}{{ suffix }}{% endif %}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card-flat mb-4">
+  <div class="section-title mb-3"><i class="bi bi-lightbulb text-warning"></i> Business Insights</div>
+  <ul class="mb-0">
+    {% for insight in insights %}<li class="mb-1">{{ insight }}</li>{% endfor %}
+  </ul>
+</div>
+
+{% if charts.workforce %}
+<div class="row g-3 mb-3">
+  {% if charts.workforce.headcount_by_department %}
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Headcount by Department</div><canvas id="c1" height="180"></canvas></div></div>
+  {% endif %}
+  {% if charts.workforce.gender_distribution %}
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Gender Distribution</div><canvas id="c2" height="180"></canvas></div></div>
+  {% endif %}
+  {% if charts.workforce.status_distribution %}
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Employee Status</div><canvas id="c3" height="180"></canvas></div></div>
+  {% endif %}
+</div>
+<div class="row g-3 mb-3">
+  {% if charts.workforce.age_distribution %}
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Age Distribution</div><canvas id="c4" height="180"></canvas></div></div>
+  {% endif %}
+  {% if charts.workforce.employment_type_distribution %}
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Employment Type</div><canvas id="c5" height="180"></canvas></div></div>
+  {% endif %}
+  {% if charts.workforce.hiring_trend %}
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Hiring Trend</div><canvas id="c6" height="180"></canvas></div></div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if charts.attrition %}
+<div class="row g-3 mb-3">
+  {% if charts.attrition.by_department %}
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Attrition by Department</div><canvas id="c7" height="180"></canvas></div></div>
+  {% endif %}
+  {% if charts.attrition.by_gender %}
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Attrition by Gender</div><canvas id="c8" height="180"></canvas></div></div>
+  {% endif %}
+  {% if charts.attrition.exit_reasons %}
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Exit Reasons</div><canvas id="c9" height="180"></canvas></div></div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if charts.salary %}
+<div class="row g-3 mb-3">
+  {% if charts.salary.by_department %}
+  <div class="col-lg-6"><div class="card-flat h-100"><div class="section-title mb-3">Salary by Department</div><canvas id="c10" height="180"></canvas></div></div>
+  {% endif %}
+  {% if charts.salary.by_experience_scatter %}
+  <div class="col-lg-6"><div class="card-flat h-100"><div class="section-title mb-3">Salary vs Experience</div><canvas id="c11" height="180"></canvas></div></div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if charts.performance %}
+<div class="row g-3 mb-3">
+  {% if charts.performance.distribution %}
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Performance Distribution</div><canvas id="c12" height="180"></canvas></div></div>
+  {% endif %}
+  {% if charts.performance.vs_salary_scatter %}
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Performance vs Salary</div><canvas id="c13" height="180"></canvas></div></div>
+  {% endif %}
+  {% if charts.performance.vs_attrition %}
+  <div class="col-lg-4"><div class="card-flat h-100"><div class="section-title mb-3">Performance vs Attrition</div><canvas id="c14" height="180"></canvas></div></div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if charts.attendance %}
+<div class="row g-3 mb-3">
+  {% if charts.attendance.by_department %}
+  <div class="col-lg-6"><div class="card-flat h-100"><div class="section-title mb-3">Attendance by Department</div><canvas id="c15" height="180"></canvas></div></div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if not charts.workforce and not charts.attrition and not charts.salary and not charts.performance and not charts.attendance %}
+<div class="card-flat text-center py-5">
+  <i class="bi bi-bar-chart display-4 text-muted mb-3"></i>
+  <h5 class="fw-bold">Not enough mapped columns for charts</h5>
+  <p class="text-muted">Go back and confirm more column mappings (department, salary, status, etc.) to unlock analytics.</p>
+</div>
+{% endif %}
+
+{% endblock %}
+{% block scripts %}
+<script>
+const palette = ["#2f6bff", "#f97066", "#12b76a", "#f79009", "#9b8afb", "#06aed4", "#ee46bc", "#667085"];
+function bar(id, labels, data, color) {
+  const el = document.getElementById(id); if (!el) return;
+  new Chart(el, { type: 'bar', data: { labels: labels, datasets: [{ data: data, backgroundColor: color || '#2f6bff', borderRadius: 6 }] },
+    options: { plugins: { legend: { display: false } } } });
+}
+function doughnut(id, labels, data) {
+  const el = document.getElementById(id); if (!el) return;
+  new Chart(el, { type: 'doughnut', data: { labels: labels, datasets: [{ data: data, backgroundColor: palette }] },
+    options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } } });
+}
+function line(id, labels, data, color) {
+  const el = document.getElementById(id); if (!el) return;
+  new Chart(el, { type: 'line', data: { labels: labels, datasets: [{ data: data, borderColor: color || '#2f6bff', backgroundColor: 'rgba(47,107,255,0.08)', fill: true, tension: 0.35 }] },
+    options: { plugins: { legend: { display: false } } } });
+}
+function scatter(id, points, color) {
+  const el = document.getElementById(id); if (!el) return;
+  new Chart(el, { type: 'scatter', data: { datasets: [{ data: points, backgroundColor: color || '#9b8afb' }] },
+    options: { plugins: { legend: { display: false } } } });
+}
+
+{% if charts.workforce %}
+{% if charts.workforce.headcount_by_department %}bar('c1', {{ charts.workforce.headcount_by_department.labels|tojson }}, {{ charts.workforce.headcount_by_department.data|tojson }});{% endif %}
+{% if charts.workforce.gender_distribution %}doughnut('c2', {{ charts.workforce.gender_distribution.labels|tojson }}, {{ charts.workforce.gender_distribution.data|tojson }});{% endif %}
+{% if charts.workforce.status_distribution %}doughnut('c3', {{ charts.workforce.status_distribution.labels|tojson }}, {{ charts.workforce.status_distribution.data|tojson }});{% endif %}
+{% if charts.workforce.age_distribution %}bar('c4', {{ charts.workforce.age_distribution.labels|tojson }}, {{ charts.workforce.age_distribution.data|tojson }}, '#9b8afb');{% endif %}
+{% if charts.workforce.employment_type_distribution %}doughnut('c5', {{ charts.workforce.employment_type_distribution.labels|tojson }}, {{ charts.workforce.employment_type_distribution.data|tojson }});{% endif %}
+{% if charts.workforce.hiring_trend %}line('c6', {{ charts.workforce.hiring_trend.labels|tojson }}, {{ charts.workforce.hiring_trend.data|tojson }}, '#12b76a');{% endif %}
+{% endif %}
+
+{% if charts.attrition %}
+{% if charts.attrition.by_department %}bar('c7', {{ charts.attrition.by_department.labels|tojson }}, {{ charts.attrition.by_department.data|tojson }}, '#f97066');{% endif %}
+{% if charts.attrition.by_gender %}bar('c8', {{ charts.attrition.by_gender.labels|tojson }}, {{ charts.attrition.by_gender.data|tojson }}, '#f97066');{% endif %}
+{% if charts.attrition.exit_reasons %}bar('c9', {{ charts.attrition.exit_reasons.labels|tojson }}, {{ charts.attrition.exit_reasons.data|tojson }}, '#f79009');{% endif %}
+{% endif %}
+
+{% if charts.salary %}
+{% if charts.salary.by_department %}bar('c10', {{ charts.salary.by_department.labels|tojson }}, {{ charts.salary.by_department.data|tojson }}, '#12b76a');{% endif %}
+{% if charts.salary.by_experience_scatter %}scatter('c11', {{ charts.salary.by_experience_scatter.points|tojson }});{% endif %}
+{% endif %}
+
+{% if charts.performance %}
+{% if charts.performance.distribution %}bar('c12', {{ charts.performance.distribution.labels|tojson }}, {{ charts.performance.distribution.data|tojson }}, '#06aed4');{% endif %}
+{% if charts.performance.vs_salary_scatter %}scatter('c13', {{ charts.performance.vs_salary_scatter.points|tojson }});{% endif %}
+{% if charts.performance.vs_attrition %}bar('c14', {{ charts.performance.vs_attrition.labels|tojson }}, {{ charts.performance.vs_attrition.data|tojson }}, '#ee46bc');{% endif %}
+{% endif %}
+
+{% if charts.attendance %}
+{% if charts.attendance.by_department %}bar('c15', {{ charts.attendance.by_department.labels|tojson }}, {{ charts.attendance.by_department.data|tojson }}, '#2f6bff');{% endif %}
+{% endif %}
+</script>
+{% endblock %}

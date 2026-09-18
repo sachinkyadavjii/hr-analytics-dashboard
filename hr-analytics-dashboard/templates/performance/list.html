@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% import "partials/avatar.html" as avatar %}
+{% block title %}Performance · HR Analytics{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h4 class="fw-bold mb-0">Performance Management</h4>
+  {% if session_role in ['ADMIN', 'HR', 'MANAGER'] %}
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addReviewModal"><i class="bi bi-plus-lg"></i> New Review</button>
+  {% endif %}
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card-flat text-center h-100 d-flex justify-content-center"><div class="fw-bold fs-3">{{ avg_rating }}/5</div><div class="text-muted small">Average Performance</div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card-flat h-100"><div class="section-title mb-2">Performance Distribution</div><canvas id="distChart" height="140"></canvas></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card-flat h-100"><div class="section-title mb-2">Department Performance</div><canvas id="deptChart" height="140"></canvas></div>
+  </div>
+</div>
+
+<div class="card-flat mb-3">
+  <form method="get" class="row g-2">
+    <div class="col-md-4"><input type="text" name="q" class="form-control" placeholder="Search employee..." value="{{ q }}"></div>
+    <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Search</button></div>
+  </form>
+</div>
+
+<div class="card-flat">
+  <div class="table-responsive"><table class="table align-middle">
+    <thead><tr><th>Employee</th><th>Review Date</th><th>Reviewer</th><th>Overall Rating</th><th>Comments</th></tr></thead>
+    <tbody>
+    {% for r in reviews %}
+      <tr>
+        <td><div class="d-flex align-items-center gap-2">{{ avatar.render(r.employee, size=26) }} {{ r.employee.full_name }}</div></td>
+        <td>{{ r.review_date|dateformat }}</td>
+        <td>{{ r.reviewer or '-' }}</td>
+        <td><span class="fw-semibold">{{ r.overall_rating }}/5</span></td>
+        <td class="text-truncate" style="max-width:250px;">{{ r.comments or '-' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="text-center text-muted py-4">No performance reviews yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+
+<div class="modal fade" id="addReviewModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <form method="POST" action="{{ url_for('performance.add_review') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-header"><h6 class="modal-title">New Performance Review</h6></div>
+      <div class="modal-body">
+        <label class="form-label">Employee</label>
+        <select name="employee_id" class="form-select mb-3" required>
+          {% for e in employees %}<option value="{{ e.id }}">{{ e.full_name }}</option>{% endfor %}
+        </select>
+        <div class="row g-2 mb-3">
+          <div class="col-6"><label class="form-label">Technical Skills</label><input type="number" min="1" max="5" name="technical_skills" class="form-control" value="4"></div>
+          <div class="col-6"><label class="form-label">Communication</label><input type="number" min="1" max="5" name="communication" class="form-control" value="4"></div>
+          <div class="col-6"><label class="form-label">Teamwork</label><input type="number" min="1" max="5" name="teamwork" class="form-control" value="4"></div>
+          <div class="col-6"><label class="form-label">Leadership</label><input type="number" min="1" max="5" name="leadership" class="form-control" value="4"></div>
+          <div class="col-6"><label class="form-label">Problem Solving</label><input type="number" min="1" max="5" name="problem_solving" class="form-control" value="4"></div>
+        </div>
+        <label class="form-label">Goals</label>
+        <textarea name="goals" class="form-control mb-3" rows="2"></textarea>
+        <label class="form-label">Manager Comments</label>
+        <textarea name="comments" class="form-control" rows="2"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Review</button>
+      </div>
+    </form>
+  </div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+new Chart(document.getElementById('distChart'), {
+  type: 'bar',
+  data: { labels: {{ charts.distribution.labels|tojson }}, datasets: [{ label: 'Reviews', data: {{ charts.distribution.data|tojson }}, backgroundColor: '#2f6bff', borderRadius: 6 }] },
+  options: { plugins: { legend: { display: false } } }
+});
+new Chart(document.getElementById('deptChart'), {
+  type: 'bar',
+  data: { labels: {{ charts.department.labels|tojson }}, datasets: [{ label: 'Avg Rating', data: {{ charts.department.data|tojson }}, backgroundColor: '#12b76a', borderRadius: 6 }] },
+  options: { plugins: { legend: { display: false } }, scales: { y: { max: 5 } } }
+});
+</script>
+{% endblock %}
