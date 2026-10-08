@@ -4,8 +4,7 @@ from extensions import db
 
 
 class User(db.Model):
-    """Login account. Linked 1-to-1 with an Employee record where relevant
-    (e.g. an EMPLOYEE-role user is tied to their own employee profile)."""
+    """Login account. Linked 1-to-1 with an Employee record where relevant."""
 
     __tablename__ = "users"
 
@@ -13,8 +12,12 @@ class User(db.Model):
     name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default="EMPLOYEE")  # ADMIN, HR, MANAGER, EMPLOYEE
-    is_active = db.Column(db.Boolean, default=True)
+    role = db.Column(db.String(20), nullable=False, default="EMPLOYEE")
+
+    # Account status used by the login flow.
+    status = db.Column(db.String(20), nullable=False, default="Active")
+    must_change_password = db.Column(db.Boolean, default=False, nullable=False)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
 
@@ -27,7 +30,10 @@ class User(db.Model):
     def check_password(self, raw_password):
         return check_password_hash(self.password_hash, raw_password)
 
-    # Simple permission helpers used across templates/routes
+    @property
+    def is_active(self):
+        return self.status == "Active"
+
     def can(self, permission):
         matrix = {
             "ADMIN": {"manage_users", "manage_employees", "manage_departments", "manage_attendance",
